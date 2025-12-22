@@ -1,8 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { currentUser } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   ChevronRight, 
   Settings, 
@@ -16,6 +17,7 @@ import {
   Share
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const menuItems = [
   { icon: User, label: 'Edit Profile', subtitle: 'Update your personal info' },
@@ -28,6 +30,15 @@ const menuItems = [
 ];
 
 const Account = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/auth');
+  };
+
   return (
     <AppLayout>
       <div className="safe-top">
@@ -47,14 +58,13 @@ const Account = () => {
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 ring-4 ring-primary/20">
-                  <AvatarImage src={currentUser.avatar} />
                   <AvatarFallback className="text-xl">
-                    {currentUser.name[0]}
+                    {user?.name?.[0] || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{currentUser.name}</h2>
-                  <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+                  <h2 className="text-lg font-semibold">{user?.name || 'User'}</h2>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
                 <Button variant="outline" size="sm">
                   Edit
@@ -93,6 +103,7 @@ const Account = () => {
           <Button 
             variant="outline" 
             className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
+            onClick={handleLogout}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Log Out
