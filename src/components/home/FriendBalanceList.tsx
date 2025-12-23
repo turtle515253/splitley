@@ -1,11 +1,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { balances, formatCurrency } from '@/data/mockData';
+import { balances } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function FriendBalanceList() {
+  const { formatCurrency } = useCurrency();
   const activeBalances = balances.filter(b => b.amount !== 0);
   const settledBalances = balances.filter(b => b.amount === 0);
 

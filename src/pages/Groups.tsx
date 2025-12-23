@@ -2,11 +2,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { groups, formatCurrency } from '@/data/mockData';
+import { groups } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { Plus, ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Groups = () => {
+  const { formatCurrency } = useCurrency();
+  
   return (
     <AppLayout>
       <div className="safe-top">
