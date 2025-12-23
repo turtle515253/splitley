@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { CurrencySelector } from '@/components/settings/CurrencySelector';
 import { 
   ChevronRight, 
   Settings, 
@@ -14,29 +17,40 @@ import {
   LogOut,
   User,
   Palette,
-  Share
+  Share,
+  Coins,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const menuItems = [
-  { icon: User, label: 'Edit Profile', subtitle: 'Update your personal info' },
-  { icon: CreditCard, label: 'Payment Methods', subtitle: 'Manage cards and accounts' },
-  { icon: Bell, label: 'Notifications', subtitle: 'Customize alerts' },
-  { icon: Palette, label: 'Appearance', subtitle: 'Theme and display' },
-  { icon: Shield, label: 'Privacy & Security', subtitle: 'Protect your account' },
-  { icon: Share, label: 'Invite Friends', subtitle: 'Earn rewards' },
-  { icon: HelpCircle, label: 'Help & Support', subtitle: 'Get assistance' },
+  { icon: User, label: 'Edit Profile', subtitle: 'Update your personal info', action: 'profile' },
+  { icon: CreditCard, label: 'Payment Methods', subtitle: 'Manage cards and accounts', action: 'payment' },
+  { icon: Coins, label: 'Currency', subtitle: 'Change display currency', action: 'currency' },
+  { icon: Bell, label: 'Notifications', subtitle: 'Customize alerts', action: 'notifications' },
+  { icon: Palette, label: 'Appearance', subtitle: 'Theme and display', action: 'appearance' },
+  { icon: Shield, label: 'Privacy & Security', subtitle: 'Protect your account', action: 'privacy' },
+  { icon: Share, label: 'Invite Friends', subtitle: 'Earn rewards', action: 'invite' },
+  { icon: HelpCircle, label: 'Help & Support', subtitle: 'Get assistance', action: 'help' },
 ];
 
 const Account = () => {
   const { user, logout } = useAuth();
+  const { currency } = useCurrency();
   const navigate = useNavigate();
+  const [showCurrencySelector, setShowCurrencySelector] = useState(false);
 
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
     navigate('/auth');
+  };
+
+  const handleMenuClick = (action: string) => {
+    if (action === 'currency') {
+      setShowCurrencySelector(true);
+    }
   };
 
   return (
@@ -74,6 +88,29 @@ const Account = () => {
           </Card>
         </div>
 
+        {/* Currency Selector Modal */}
+        {showCurrencySelector && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Select Currency</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setShowCurrencySelector(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto">
+                  <CurrencySelector onClose={() => setShowCurrencySelector(false)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu Items */}
         <div className="px-5 pb-8">
           <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -81,6 +118,7 @@ const Account = () => {
               {menuItems.map((item, index) => (
                 <button
                   key={item.label}
+                  onClick={() => handleMenuClick(item.action)}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 text-left",
                     index !== menuItems.length - 1 && "border-b border-border/50"
@@ -91,7 +129,9 @@ const Account = () => {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-sm">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.subtitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.action === 'currency' ? `${currency.name} (${currency.symbol})` : item.subtitle}
+                    </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </button>

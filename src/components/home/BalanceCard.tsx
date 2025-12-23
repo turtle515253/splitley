@@ -1,8 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { formatCurrency, balances } from '@/data/mockData';
+import { balances } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
 
 export function BalanceCard() {
+  const { formatCurrency } = useCurrency();
+  
   const totalOwed = balances
     .filter(b => b.amount > 0)
     .reduce((sum, b) => sum + b.amount, 0);

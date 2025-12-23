@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { activities, formatCurrency, formatRelativeTime } from '@/data/mockData';
+import { activities, formatRelativeTime } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { ChevronRight, Plus, CreditCard, Users, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,7 @@ const activityColors = {
 
 export function RecentActivity() {
   const navigate = useNavigate();
+  const { formatCurrency } = useCurrency();
   const recentActivities = activities.slice(0, 4);
 
   return (

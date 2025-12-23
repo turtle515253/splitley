@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { users, groups, getCategoryIcon } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { ExpenseCategory } from '@/types';
 import { X, ChevronDown, Check, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const categories: { id: ExpenseCategory; label: string }[] = [
 
 const AddExpense = () => {
   const navigate = useNavigate();
+  const { currency } = useCurrency();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('food');
@@ -74,7 +76,7 @@ const AddExpense = () => {
           <div className="text-center py-6 animate-fade-in">
             <Label className="text-sm text-muted-foreground">Amount</Label>
             <div className="flex items-center justify-center gap-1 mt-2">
-              <span className="text-4xl font-bold text-muted-foreground">$</span>
+              <span className="text-4xl font-bold text-muted-foreground">{currency.symbol}</span>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -243,7 +245,7 @@ const AddExpense = () => {
               {selectedMembers.length > 0 && amount && (
                 <p className="text-sm text-muted-foreground mt-4 pt-4 border-t">
                   Split equally: <span className="font-semibold text-foreground">
-                    ${(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
+                    {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
                   </span> each
                 </p>
               )}

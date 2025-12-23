@@ -1,6 +1,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { activities, formatCurrency, formatRelativeTime } from '@/data/mockData';
+import { activities, formatRelativeTime } from '@/data/mockData';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { Plus, CreditCard, Users, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,8 @@ const activityColors = {
 };
 
 const Activity = () => {
+  const { formatCurrency } = useCurrency();
+  
   // Group activities by date
   const groupedActivities = activities.reduce((acc, activity) => {
     const dateKey = formatRelativeTime(activity.createdAt);
