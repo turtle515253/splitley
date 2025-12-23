@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { CurrencySelector } from '@/components/settings/CurrencySelector';
+import { AppearanceSelector } from '@/components/settings/AppearanceSelector';
 import { 
   ChevronRight, 
   Settings, 
@@ -38,8 +40,10 @@ const menuItems = [
 const Account = () => {
   const { user, logout } = useAuth();
   const { currency } = useCurrency();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
+  const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -50,7 +54,19 @@ const Account = () => {
   const handleMenuClick = (action: string) => {
     if (action === 'currency') {
       setShowCurrencySelector(true);
+    } else if (action === 'appearance') {
+      setShowAppearanceSelector(true);
     }
+  };
+
+  const getSubtitle = (item: typeof menuItems[0]) => {
+    if (item.action === 'currency') {
+      return `${currency.name} (${currency.symbol})`;
+    }
+    if (item.action === 'appearance') {
+      return theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
+    return item.subtitle;
   };
 
   return (
@@ -111,6 +127,27 @@ const Account = () => {
           </div>
         )}
 
+        {/* Appearance Selector Modal */}
+        {showAppearanceSelector && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Appearance</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setShowAppearanceSelector(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu Items */}
         <div className="px-5 pb-8">
           <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -130,7 +167,7 @@ const Account = () => {
                   <div className="flex-1">
                     <p className="font-medium text-sm">{item.label}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.action === 'currency' ? `${currency.name} (${currency.symbol})` : item.subtitle}
+                      {getSubtitle(item)}
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -150,7 +187,7 @@ const Account = () => {
           </Button>
 
           <p className="text-xs text-center text-muted-foreground mt-6">
-            SplitEase v1.0.0
+            Splitley v1.0.0
           </p>
         </div>
       </div>
