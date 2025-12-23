@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,9 +8,16 @@ import { groups } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { Plus, ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NewGroupDialog } from '@/components/groups/NewGroupDialog';
 
 const Groups = () => {
   const { formatCurrency } = useCurrency();
+  const navigate = useNavigate();
+  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
+  
+  const handleGroupClick = (groupId: string) => {
+    navigate(`/groups/${groupId}`);
+  };
   
   return (
     <AppLayout>
@@ -17,7 +26,7 @@ const Groups = () => {
         <header className="px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Groups</h1>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setShowNewGroupDialog(true)}>
               <Plus className="h-4 w-4 mr-1" />
               New Group
             </Button>
@@ -33,6 +42,7 @@ const Groups = () => {
                 "cursor-pointer hover:shadow-elevated transition-all duration-200 animate-slide-up"
               )}
               style={{ animationDelay: `${index * 50}ms` }}
+              onClick={() => handleGroupClick(group.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -82,7 +92,7 @@ const Groups = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Create a group to start splitting expenses with friends
                 </p>
-                <Button>
+                <Button onClick={() => setShowNewGroupDialog(true)}>
                   <Plus className="h-4 w-4 mr-1" />
                   Create Group
                 </Button>
@@ -91,6 +101,11 @@ const Groups = () => {
           )}
         </div>
       </div>
+      
+      <NewGroupDialog 
+        open={showNewGroupDialog} 
+        onOpenChange={setShowNewGroupDialog} 
+      />
     </AppLayout>
   );
 };
