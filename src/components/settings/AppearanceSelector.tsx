@@ -68,7 +68,7 @@ export const AppearanceSelector = ({ onClose }: AppearanceSelectorProps) => {
       </div>
 
       {/* Accent Color */}
-      <div>
+      <div className="pb-4">
         <h3 className="text-sm font-medium text-muted-foreground mb-3">Accent Color</h3>
         <div className="grid grid-cols-3 gap-3">
           {accentColors.map((color) => (
