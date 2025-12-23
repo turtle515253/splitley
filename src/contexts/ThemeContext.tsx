@@ -2,10 +2,23 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
+export type AccentColor = 'mint' | 'blue' | 'purple' | 'orange' | 'pink' | 'teal';
+
+export const accentColors: { id: AccentColor; name: string; hue: string }[] = [
+  { id: 'mint', name: 'Mint', hue: '162' },
+  { id: 'blue', name: 'Blue', hue: '217' },
+  { id: 'purple', name: 'Purple', hue: '270' },
+  { id: 'orange', name: 'Orange', hue: '25' },
+  { id: 'pink', name: 'Pink', hue: '340' },
+  { id: 'teal', name: 'Teal', hue: '180' },
+];
+
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   resolvedTheme: 'light' | 'dark';
+  accentColor: AccentColor;
+  setAccentColor: (color: AccentColor) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -14,6 +27,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<Theme>(() => {
     const stored = localStorage.getItem('splitley-theme');
     return (stored as Theme) || 'system';
+  });
+
+  const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
+    const stored = localStorage.getItem('splitley-accent-color');
+    return (stored as AccentColor) || 'mint';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
@@ -47,13 +65,44 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const colorConfig = accentColors.find(c => c.id === accentColor) || accentColors[0];
+    const hue = colorConfig.hue;
+    
+    // Apply accent color CSS variables
+    root.style.setProperty('--primary', `${hue} 63% 41%`);
+    root.style.setProperty('--primary-glow', `${hue} 63% 51%`);
+    root.style.setProperty('--ring', `${hue} 63% 41%`);
+    root.style.setProperty('--secondary', `${hue} 20% 94%`);
+    root.style.setProperty('--secondary-foreground', `${hue} 63% 35%`);
+    root.style.setProperty('--accent', `${hue} 63% 95%`);
+    root.style.setProperty('--accent-foreground', `${hue} 63% 30%`);
+    
+    // Dark mode adjustments
+    if (resolvedTheme === 'dark') {
+      root.style.setProperty('--primary', `${hue} 63% 45%`);
+      root.style.setProperty('--primary-glow', `${hue} 63% 55%`);
+      root.style.setProperty('--ring', `${hue} 63% 45%`);
+      root.style.setProperty('--secondary', `${hue} 15% 18%`);
+      root.style.setProperty('--secondary-foreground', `${hue} 50% 70%`);
+      root.style.setProperty('--accent', `${hue} 30% 15%`);
+      root.style.setProperty('--accent-foreground', `${hue} 60% 70%`);
+    }
+  }, [accentColor, resolvedTheme]);
+
   const setTheme = (newTheme: Theme) => {
     localStorage.setItem('splitley-theme', newTheme);
     setThemeState(newTheme);
   };
 
+  const setAccentColor = (color: AccentColor) => {
+    localStorage.setItem('splitley-accent-color', color);
+    setAccentColorState(color);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme, accentColor, setAccentColor }}>
       {children}
     </ThemeContext.Provider>
   );
