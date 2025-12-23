@@ -142,7 +142,9 @@ const Account = () => {
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
-                <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
+                <div className="max-h-[70vh] overflow-y-auto pb-6">
+                  <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
+                </div>
               </div>
             </div>
           </div>
