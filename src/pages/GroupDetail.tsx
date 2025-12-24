@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { groups, expenses } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
+import { User } from '@/types';
+import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
+import { toast } from 'sonner';
 
 const GroupDetail = () => {
   const { formatCurrency } = useCurrency();
@@ -15,6 +19,17 @@ const GroupDetail = () => {
   
   const group = groups.find(g => g.id === groupId);
   const groupExpenses = expenses.filter(e => e.groupId === groupId);
+  
+  const [members, setMembers] = useState<User[]>(group?.members || []);
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  
+  const handleAddMembers = (newMembers: User[]) => {
+    setMembers(prev => [...prev, ...newMembers]);
+  };
+  
+  const handleInvite = (email: string) => {
+    toast.info(`Invitation sent to ${email}. They'll be added once they register.`);
+  };
   
   if (!group) {
     return (
@@ -71,9 +86,15 @@ const GroupDetail = () => {
 
         {/* Members */}
         <div className="px-5 mb-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Members ({group.members.length})</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Members ({members.length})</h3>
+            <Button variant="outline" size="sm" onClick={() => setShowAddMemberDialog(true)}>
+              <UserPlus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {group.members.map((member) => (
+            {members.map((member) => (
               <div key={member.id} className="flex flex-col items-center min-w-[60px]">
                 <Avatar className="h-12 w-12 mb-1">
                   <AvatarImage src={member.avatar} />
@@ -127,6 +148,14 @@ const GroupDetail = () => {
           </div>
         </div>
       </div>
+      
+      <AddMemberDialog
+        open={showAddMemberDialog}
+        onOpenChange={setShowAddMemberDialog}
+        currentMembers={members}
+        onAddMembers={handleAddMembers}
+        onInvite={handleInvite}
+      />
     </AppLayout>
   );
 };
