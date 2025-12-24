@@ -75,7 +75,7 @@ const GroupDetail = () => {
                   <p className="text-sm text-muted-foreground">Total Expenses</p>
                   <p className="text-2xl font-bold">{formatCurrency(group.totalExpenses)}</p>
                 </div>
-                <Button size="sm" onClick={() => navigate('/add-expense')}>
+                <Button size="sm" onClick={() => navigate(`/add-expense?groupId=${groupId}`)}>
                   <Plus className="h-4 w-4 mr-1" />
                   Add Expense
                 </Button>
@@ -138,7 +138,7 @@ const GroupDetail = () => {
               <Card className="py-8">
                 <CardContent className="text-center">
                   <p className="text-muted-foreground">No expenses in this group yet</p>
-                  <Button className="mt-3" onClick={() => navigate('/add-expense')}>
+                  <Button className="mt-3" onClick={() => navigate(`/add-expense?groupId=${groupId}`)}>
                     <Plus className="h-4 w-4 mr-1" />
                     Add First Expense
                   </Button>

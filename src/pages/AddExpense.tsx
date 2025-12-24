@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,11 +26,14 @@ const categories: { id: ExpenseCategory; label: string }[] = [
 
 const AddExpense = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedGroupId = searchParams.get('groupId');
+  
   const { currency } = useCurrency();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('food');
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(preselectedGroupId);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
