@@ -32,7 +32,7 @@ const AddExpense = () => {
   const { currency } = useCurrency();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('food');
+  const [category, setCategory] = useState<ExpenseCategory | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(preselectedGroupId);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -112,10 +112,16 @@ const AddExpense = () => {
                 className="w-full flex items-center justify-between mt-2"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{getCategoryIcon(category)}</span>
-                  <span className="font-medium">
-                    {categories.find(c => c.id === category)?.label}
-                  </span>
+                  {category ? (
+                    <>
+                      <span className="text-xl">{getCategoryIcon(category)}</span>
+                      <span className="font-medium">
+                        {categories.find(c => c.id === category)?.label}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Select a category</span>
+                  )}
                 </div>
                 <ChevronDown className={cn(
                   "h-5 w-5 text-muted-foreground transition-transform",
