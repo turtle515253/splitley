@@ -37,6 +37,10 @@ const AddExpense = () => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [paidBy, setPaidBy] = useState<string>('1'); // '1' = current user (You)
+  const [showPaidByPicker, setShowPaidByPicker] = useState(false);
+  const [splitType, setSplitType] = useState<'equally' | 'unequally' | 'percentage'>('equally');
+  const [customSplits, setCustomSplits] = useState<Record<string, string>>({});
 
   const toggleMember = (userId: string) => {
     setSelectedMembers(prev => 
@@ -56,9 +60,36 @@ const AddExpense = () => {
     navigate('/');
   };
 
+  const currentUser = users.find(u => u.id === '1');
+  
   const availableMembers = selectedGroup 
     ? groups.find(g => g.id === selectedGroup)?.members.filter(m => m.id !== '1') || []
     : users.filter(u => u.id !== '1');
+
+  const allPossiblePayers = selectedGroup
+    ? groups.find(g => g.id === selectedGroup)?.members || []
+    : users;
+
+  const paidByUser = allPossiblePayers.find(u => u.id === paidBy);
+
+  const getSplitAmount = (memberId: string) => {
+    if (!amount || parseFloat(amount) === 0) return '0.00';
+    const totalAmount = parseFloat(amount);
+    const splitCount = selectedMembers.length + 1; // +1 for current user
+    
+    if (splitType === 'equally') {
+      return (totalAmount / splitCount).toFixed(2);
+    } else if (splitType === 'unequally') {
+      return customSplits[memberId] || '0.00';
+    } else {
+      const percentage = parseFloat(customSplits[memberId] || '0');
+      return ((totalAmount * percentage) / 100).toFixed(2);
+    }
+  };
+
+  const handleCustomSplitChange = (memberId: string, value: string) => {
+    setCustomSplits(prev => ({ ...prev, [memberId]: value }));
+  };
 
   return (
     <AppLayout hideNav>
@@ -224,39 +255,196 @@ const AddExpense = () => {
 
           {/* Split With */}
           <Card className="animate-slide-up" style={{ animationDelay: '150ms' }}>
-            <CardContent className="p-4">
-              <Label className="text-xs text-muted-foreground">Split with</Label>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {availableMembers.map((member) => (
-                  <button
-                    key={member.id}
-                    onClick={() => toggleMember(member.id)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-full transition-all",
-                      selectedMembers.includes(member.id)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-accent hover:bg-accent/80"
-                    )}
-                  >
+            <CardContent className="p-4 space-y-4">
+              {/* Paid By Section */}
+              <div>
+                <Label className="text-xs text-muted-foreground">Paid by</Label>
+                <button
+                  onClick={() => setShowPaidByPicker(!showPaidByPicker)}
+                  className="w-full flex items-center justify-between mt-2"
+                >
+                  <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={member.avatar} />
+                      <AvatarImage src={paidByUser?.avatar} />
                       <AvatarFallback className="text-xs">
-                        {member.name[0]}
+                        {paidByUser?.name[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
-                    {selectedMembers.includes(member.id) && (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </button>
-                ))}
+                    <span className="font-medium">
+                      {paidBy === '1' ? 'You' : paidByUser?.name.split(' ')[0]}
+                    </span>
+                  </div>
+                  <ChevronDown className={cn(
+                    "h-5 w-5 text-muted-foreground transition-transform",
+                    showPaidByPicker && "rotate-180"
+                  )} />
+                </button>
+
+                {showPaidByPicker && (
+                  <div className="space-y-2 mt-4 pt-4 border-t">
+                    {allPossiblePayers.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => {
+                          setPaidBy(user.id);
+                          setShowPaidByPicker(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-xl transition-all",
+                          paidBy === user.id 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-accent hover:bg-accent/80"
+                        )}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar} />
+                          <AvatarFallback>{user.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">
+                          {user.id === '1' ? 'You' : user.name}
+                        </span>
+                        {paidBy === user.id && <Check className="h-4 w-4 ml-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {selectedMembers.length > 0 && amount && (
-                <p className="text-sm text-muted-foreground mt-4 pt-4 border-t">
-                  Split equally: <span className="font-semibold text-foreground">
-                    {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
-                  </span> each
-                </p>
+
+              {/* Split With Members */}
+              <div className="pt-4 border-t">
+                <Label className="text-xs text-muted-foreground">Split with</Label>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {availableMembers.map((member) => (
+                    <button
+                      key={member.id}
+                      onClick={() => toggleMember(member.id)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-full transition-all",
+                        selectedMembers.includes(member.id)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-accent hover:bg-accent/80"
+                      )}
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={member.avatar} />
+                        <AvatarFallback className="text-xs">
+                          {member.name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
+                      {selectedMembers.includes(member.id) && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Split Type Selection */}
+              {selectedMembers.length > 0 && (
+                <div className="pt-4 border-t">
+                  <Label className="text-xs text-muted-foreground">Split</Label>
+                  <div className="flex gap-2 mt-2">
+                    {(['equally', 'unequally', 'percentage'] as const).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setSplitType(type)}
+                        className={cn(
+                          "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all capitalize",
+                          splitType === type
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-accent hover:bg-accent/80"
+                        )}
+                      >
+                        {type === 'percentage' ? 'By %' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Split Inputs */}
+                  {splitType !== 'equally' && amount && (
+                    <div className="space-y-3 mt-4">
+                      {/* Current user's split */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={currentUser?.avatar} />
+                            <AvatarFallback className="text-xs">{currentUser?.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">You</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {splitType === 'percentage' ? (
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={customSplits['1'] || ''}
+                              onChange={(e) => handleCustomSplitChange('1', e.target.value)}
+                              className="w-20 h-8 text-right"
+                            />
+                          ) : (
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={customSplits['1'] || ''}
+                              onChange={(e) => handleCustomSplitChange('1', e.target.value)}
+                              className="w-24 h-8 text-right"
+                            />
+                          )}
+                          <span className="text-sm text-muted-foreground w-8">
+                            {splitType === 'percentage' ? '%' : currency.symbol}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Selected members' splits */}
+                      {selectedMembers.map((memberId) => {
+                        const member = availableMembers.find(m => m.id === memberId);
+                        return (
+                          <div key={memberId} className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={member?.avatar} />
+                                <AvatarFallback className="text-xs">{member?.name[0]}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{member?.name.split(' ')[0]}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {splitType === 'percentage' ? (
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  value={customSplits[memberId] || ''}
+                                  onChange={(e) => handleCustomSplitChange(memberId, e.target.value)}
+                                  className="w-20 h-8 text-right"
+                                />
+                              ) : (
+                                <Input
+                                  type="number"
+                                  placeholder="0.00"
+                                  value={customSplits[memberId] || ''}
+                                  onChange={(e) => handleCustomSplitChange(memberId, e.target.value)}
+                                  className="w-24 h-8 text-right"
+                                />
+                              )}
+                              <span className="text-sm text-muted-foreground w-8">
+                                {splitType === 'percentage' ? '%' : currency.symbol}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Split Summary */}
+                  {amount && splitType === 'equally' && (
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Split equally: <span className="font-semibold text-foreground">
+                        {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
+                      </span> each
+                    </p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
