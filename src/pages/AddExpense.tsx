@@ -42,12 +42,25 @@ const AddExpense = () => {
   const [splitType, setSplitType] = useState<'equally' | 'unequally' | 'percentage'>('equally');
   const [customSplits, setCustomSplits] = useState<Record<string, string>>({});
 
+  // Auto-select all members when group changes or on initial load
+  useEffect(() => {
+    const members = selectedGroup 
+      ? groups.find(g => g.id === selectedGroup)?.members.filter(m => m.id !== '1') || []
+      : users.filter(u => u.id !== '1');
+    setSelectedMembers(members.map(m => m.id));
+  }, [selectedGroup]);
+
   const toggleMember = (userId: string) => {
     setSelectedMembers(prev => 
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
+  };
+
+  const handleSplitTypeChange = (type: 'equally' | 'unequally' | 'percentage') => {
+    setSplitType(type);
+    setCustomSplits({}); // Reset custom splits when changing type
   };
 
   const handleSubmit = () => {
@@ -310,142 +323,178 @@ const AddExpense = () => {
                 )}
               </div>
 
-              {/* Split With Members */}
+              {/* Split Type Selection */}
               <div className="pt-4 border-t">
-                <Label className="text-xs text-muted-foreground">Split with</Label>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {availableMembers.map((member) => (
+                <Label className="text-xs text-muted-foreground">Split</Label>
+                <div className="flex gap-2 mt-2">
+                  {(['equally', 'unequally', 'percentage'] as const).map((type) => (
                     <button
-                      key={member.id}
-                      onClick={() => toggleMember(member.id)}
+                      key={type}
+                      onClick={() => handleSplitTypeChange(type)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-full transition-all",
-                        selectedMembers.includes(member.id)
+                        "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                        splitType === type
                           ? "bg-primary text-primary-foreground"
                           : "bg-accent hover:bg-accent/80"
                       )}
                     >
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={member.avatar} />
-                        <AvatarFallback className="text-xs">
-                          {member.name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
-                      {selectedMembers.includes(member.id) && (
-                        <Check className="h-4 w-4" />
-                      )}
+                      {type === 'percentage' ? 'By %' : type === 'unequally' ? 'Unequally' : 'Equally'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Split Type Selection */}
-              {selectedMembers.length > 0 && (
-                <div className="pt-4 border-t">
-                  <Label className="text-xs text-muted-foreground">Split</Label>
-                  <div className="flex gap-2 mt-2">
-                    {(['equally', 'unequally', 'percentage'] as const).map((type) => (
+              {/* Split With Members */}
+              <div className="pt-4 border-t">
+                <Label className="text-xs text-muted-foreground">Split with</Label>
+                
+                {splitType === 'equally' ? (
+                  /* For equally split - show toggle chips */
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {availableMembers.map((member) => (
                       <button
-                        key={type}
-                        onClick={() => setSplitType(type)}
+                        key={member.id}
+                        onClick={() => toggleMember(member.id)}
                         className={cn(
-                          "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all capitalize",
-                          splitType === type
+                          "flex items-center gap-2 px-3 py-2 rounded-full transition-all",
+                          selectedMembers.includes(member.id)
                             ? "bg-primary text-primary-foreground"
                             : "bg-accent hover:bg-accent/80"
                         )}
                       >
-                        {type === 'percentage' ? 'By %' : type.charAt(0).toUpperCase() + type.slice(1)}
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={member.avatar} />
+                          <AvatarFallback className="text-xs">
+                            {member.name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
+                        {selectedMembers.includes(member.id) && (
+                          <Check className="h-4 w-4" />
+                        )}
                       </button>
                     ))}
                   </div>
-
-                  {/* Custom Split Inputs */}
-                  {splitType !== 'equally' && amount && (
-                    <div className="space-y-3 mt-4">
-                      {/* Current user's split */}
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={currentUser?.avatar} />
-                            <AvatarFallback className="text-xs">{currentUser?.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">You</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {splitType === 'percentage' ? (
+                ) : (
+                  /* For unequally/percentage - show list with inputs */
+                  <div className="space-y-3 mt-3">
+                    {/* Current user's split */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={currentUser?.avatar} />
+                          <AvatarFallback className="text-xs">{currentUser?.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">You</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {splitType === 'percentage' ? (
+                          <>
                             <Input
                               type="number"
                               placeholder="0"
                               value={customSplits['1'] || ''}
                               onChange={(e) => handleCustomSplitChange('1', e.target.value)}
-                              className="w-20 h-8 text-right"
+                              className="w-16 h-9 text-right"
                             />
-                          ) : (
+                            <span className="text-sm text-muted-foreground w-6">%</span>
+                            <span className="text-sm text-muted-foreground w-20 text-right">
+                              {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits['1'] || '0')) / 100).toFixed(2) : '0.00'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm text-muted-foreground">{currency.symbol}</span>
                             <Input
                               type="number"
                               placeholder="0.00"
                               value={customSplits['1'] || ''}
                               onChange={(e) => handleCustomSplitChange('1', e.target.value)}
-                              className="w-24 h-8 text-right"
+                              className="w-24 h-9 text-right"
                             />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* All available members */}
+                    {availableMembers.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-1">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="text-xs">{member.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {splitType === 'percentage' ? (
+                            <>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={customSplits[member.id] || ''}
+                                onChange={(e) => handleCustomSplitChange(member.id, e.target.value)}
+                                className="w-16 h-9 text-right"
+                              />
+                              <span className="text-sm text-muted-foreground w-6">%</span>
+                              <span className="text-sm text-muted-foreground w-20 text-right">
+                                {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits[member.id] || '0')) / 100).toFixed(2) : '0.00'}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-sm text-muted-foreground">{currency.symbol}</span>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={customSplits[member.id] || ''}
+                                onChange={(e) => handleCustomSplitChange(member.id, e.target.value)}
+                                className="w-24 h-9 text-right"
+                              />
+                            </>
                           )}
-                          <span className="text-sm text-muted-foreground w-8">
-                            {splitType === 'percentage' ? '%' : currency.symbol}
-                          </span>
                         </div>
                       </div>
-                      {/* Selected members' splits */}
-                      {selectedMembers.map((memberId) => {
-                        const member = availableMembers.find(m => m.id === memberId);
-                        return (
-                          <div key={memberId} className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={member?.avatar} />
-                                <AvatarFallback className="text-xs">{member?.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{member?.name.split(' ')[0]}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {splitType === 'percentage' ? (
-                                <Input
-                                  type="number"
-                                  placeholder="0"
-                                  value={customSplits[memberId] || ''}
-                                  onChange={(e) => handleCustomSplitChange(memberId, e.target.value)}
-                                  className="w-20 h-8 text-right"
-                                />
-                              ) : (
-                                <Input
-                                  type="number"
-                                  placeholder="0.00"
-                                  value={customSplits[memberId] || ''}
-                                  onChange={(e) => handleCustomSplitChange(memberId, e.target.value)}
-                                  className="w-24 h-8 text-right"
-                                />
-                              )}
-                              <span className="text-sm text-muted-foreground w-8">
-                                {splitType === 'percentage' ? '%' : currency.symbol}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                    ))}
 
-                  {/* Split Summary */}
-                  {amount && splitType === 'equally' && (
-                    <p className="text-sm text-muted-foreground mt-4">
-                      Split equally: <span className="font-semibold text-foreground">
-                        {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
-                      </span> each
-                    </p>
-                  )}
-                </div>
-              )}
+                    {/* Total validation */}
+                    {amount && (
+                      <div className="pt-3 border-t flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Total</span>
+                        {splitType === 'percentage' ? (
+                          <span className={cn(
+                            "text-sm font-medium",
+                            Object.values(customSplits).reduce((sum, val) => sum + parseFloat(val || '0'), 0) === 100 
+                              ? "text-green-600" 
+                              : "text-destructive"
+                          )}>
+                            {Object.values(customSplits).reduce((sum, val) => sum + parseFloat(val || '0'), 0).toFixed(0)}% of 100%
+                          </span>
+                        ) : (
+                          <span className={cn(
+                            "text-sm font-medium",
+                            Math.abs(Object.values(customSplits).reduce((sum, val) => sum + parseFloat(val || '0'), 0) - parseFloat(amount)) < 0.01
+                              ? "text-green-600" 
+                              : "text-destructive"
+                          )}>
+                            {currency.symbol}{Object.values(customSplits).reduce((sum, val) => sum + parseFloat(val || '0'), 0).toFixed(2)} of {currency.symbol}{parseFloat(amount).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Split Summary for equally */}
+                {splitType === 'equally' && selectedMembers.length > 0 && amount && (
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Split equally: <span className="font-semibold text-foreground">
+                      {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
+                    </span> each
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
