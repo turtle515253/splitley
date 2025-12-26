@@ -1,0 +1,123 @@
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { User } from '@/types';
+import { toast } from 'sonner';
+
+interface SettleUpDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  friend: User;
+  balanceAmount: number;
+  onSettle: (amount: number) => void;
+}
+
+export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSettle }: SettleUpDialogProps) {
+  const { formatCurrency, currency } = useCurrency();
+  const [amount, setAmount] = useState(Math.abs(balanceAmount).toString());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isYouOwe = balanceAmount < 0;
+  const suggestedAmount = Math.abs(balanceAmount);
+
+  const handleSettle = async () => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    onSettle(numAmount);
+    toast.success(`Payment of ${formatCurrency(numAmount)} recorded!`);
+    onOpenChange(false);
+    setIsSubmitting(false);
+  };
+
+  const handleFullSettle = () => {
+    setAmount(suggestedAmount.toString());
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Settle Up</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={friend.avatar} />
+              <AvatarFallback>
+                {friend.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{friend.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {isYouOwe ? 'You owe' : 'Owes you'} {formatCurrency(suggestedAmount)}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="amount">Payment Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                {currency.symbol}
+              </span>
+              <Input
+                id="amount"
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="pl-8"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            {parseFloat(amount) !== suggestedAmount && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={handleFullSettle}
+                className="w-full"
+              >
+                Settle full amount ({formatCurrency(suggestedAmount)})
+              </Button>
+            )}
+          </div>
+
+          <div className="p-4 rounded-xl bg-muted/30 text-sm">
+            <p className="text-muted-foreground">
+              {isYouOwe 
+                ? `Recording that you paid ${friend.name.split(' ')[0]}`
+                : `Recording that ${friend.name.split(' ')[0]} paid you`
+              }
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSettle} disabled={isSubmitting}>
+            {isSubmitting ? 'Recording...' : 'Record Payment'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
