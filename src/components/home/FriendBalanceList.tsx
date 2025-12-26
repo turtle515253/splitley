@@ -5,9 +5,11 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export function FriendBalanceList() {
   const { formatCurrency } = useCurrency();
+  const navigate = useNavigate();
   const activeBalances = balances.filter(b => b.amount !== 0);
   const settledBalances = balances.filter(b => b.amount === 0);
 
@@ -26,6 +28,7 @@ export function FriendBalanceList() {
         {activeBalances.map((balance, index) => (
           <div
             key={balance.userId}
+            onClick={() => navigate(`/friend/${balance.userId}`)}
             className={cn(
               "flex items-center justify-between p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up",
             )}
