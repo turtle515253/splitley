@@ -7,6 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error?: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ error?: string }>;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,8 +99,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    
+    // Also update in stored users
+    const users = getStoredUsers();
+    const userIndex = users.findIndex(u => u.id === user.id);
+    if (userIndex !== -1) {
+      users[userIndex] = { ...users[userIndex], ...updates };
+      saveStoredUsers(users);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

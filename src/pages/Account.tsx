@@ -9,6 +9,8 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CurrencySelector } from '@/components/settings/CurrencySelector';
 import { AppearanceSelector } from '@/components/settings/AppearanceSelector';
+import { EditProfileDialog } from '@/components/account/EditProfileDialog';
+import { InviteFriendsDialog } from '@/components/account/InviteFriendsDialog';
 import { 
   ChevronRight, 
   Settings, 
@@ -44,6 +46,8 @@ const Account = () => {
   const navigate = useNavigate();
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
   const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showInviteFriends, setShowInviteFriends] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -52,10 +56,31 @@ const Account = () => {
   };
 
   const handleMenuClick = (action: string) => {
-    if (action === 'currency') {
-      setShowCurrencySelector(true);
-    } else if (action === 'appearance') {
-      setShowAppearanceSelector(true);
+    switch (action) {
+      case 'currency':
+        setShowCurrencySelector(true);
+        break;
+      case 'appearance':
+        setShowAppearanceSelector(true);
+        break;
+      case 'profile':
+        setShowEditProfile(true);
+        break;
+      case 'invite':
+        setShowInviteFriends(true);
+        break;
+      case 'payment':
+        toast.info('Payment methods coming soon!');
+        break;
+      case 'notifications':
+        toast.info('Notification settings coming soon!');
+        break;
+      case 'privacy':
+        toast.info('Privacy settings coming soon!');
+        break;
+      case 'help':
+        toast.info('Help & Support coming soon!');
+        break;
     }
   };
 
@@ -96,13 +121,19 @@ const Account = () => {
                   <h2 className="text-lg font-semibold">{user?.name || 'User'}</h2>
                   <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
                   Edit
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Edit Profile Dialog */}
+        <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
+
+        {/* Invite Friends Dialog */}
+        <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
 
         {/* Currency Selector Modal */}
         {showCurrencySelector && (
