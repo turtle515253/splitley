@@ -14,6 +14,7 @@ import Activity from "./pages/Activity";
 import Account from "./pages/Account";
 import AddExpense from "./pages/AddExpense";
 import Auth from "./pages/Auth";
+import FriendDetail from "./pages/FriendDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
                 <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
                 <Route path="/add-expense" element={<ProtectedRoute><AddExpense /></ProtectedRoute>} />
+                <Route path="/friend/:friendId" element={<ProtectedRoute><FriendDetail /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
