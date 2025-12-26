@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,14 +7,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { balances, activities, formatRelativeTime } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
+import { SettleUpDialog } from '@/components/friends/SettleUpDialog';
 
 export default function FriendDetail() {
   const { friendId } = useParams();
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
+  const [showSettleUp, setShowSettleUp] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState<number | null>(null);
 
   const balance = balances.find(b => b.userId === friendId);
   const friendActivities = activities.filter(a => a.user.id === friendId);
+
+  // Use local state for balance if settled, otherwise use original
+  const displayBalance = currentBalance !== null ? currentBalance : (balance?.amount ?? 0);
+
+  const handleSettle = (amount: number) => {
+    if (!balance) return;
+    const newBalance = balance.amount < 0 
+      ? displayBalance + amount 
+      : displayBalance - amount;
+    setCurrentBalance(Math.max(0, Math.min(0, newBalance)) === 0 ? newBalance : newBalance);
+  };
 
   if (!balance) {
     return (
@@ -52,25 +67,33 @@ export default function FriendDetail() {
               
               <div className="mt-4 p-4 rounded-xl bg-muted/30 w-full">
                 <p className="text-sm text-muted-foreground mb-1">
-                  {balance.amount > 0 ? 'owes you' : balance.amount < 0 ? 'you owe' : 'settled up'}
+                  {displayBalance > 0 ? 'owes you' : displayBalance < 0 ? 'you owe' : 'settled up'}
                 </p>
                 <p className={cn(
                   "text-2xl font-bold",
-                  balance.amount > 0 ? "text-positive" : balance.amount < 0 ? "text-negative" : "text-muted-foreground"
+                  displayBalance > 0 ? "text-positive" : displayBalance < 0 ? "text-negative" : "text-muted-foreground"
                 )}>
-                  {balance.amount !== 0 && (balance.amount > 0 ? '+' : '-')}
-                  {formatCurrency(balance.amount)}
+                  {displayBalance !== 0 && (displayBalance > 0 ? '+' : '-')}
+                  {formatCurrency(Math.abs(displayBalance))}
                 </p>
               </div>
 
-              {balance.amount !== 0 && (
-                <Button className="w-full mt-4">
-                  {balance.amount > 0 ? 'Remind' : 'Settle Up'}
+              {displayBalance !== 0 && (
+                <Button className="w-full mt-4" onClick={() => setShowSettleUp(true)}>
+                  {displayBalance > 0 ? 'Remind' : 'Settle Up'}
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
+
+        <SettleUpDialog
+          open={showSettleUp}
+          onOpenChange={setShowSettleUp}
+          friend={balance.user}
+          balanceAmount={displayBalance}
+          onSettle={handleSettle}
+        />
 
         <Card>
           <CardHeader>
