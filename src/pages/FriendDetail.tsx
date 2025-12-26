@@ -8,12 +8,14 @@ import { balances, activities, formatRelativeTime } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { SettleUpDialog } from '@/components/friends/SettleUpDialog';
+import { RemindDialog } from '@/components/friends/RemindDialog';
 
 export default function FriendDetail() {
   const { friendId } = useParams();
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
   const [showSettleUp, setShowSettleUp] = useState(false);
+  const [showRemind, setShowRemind] = useState(false);
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
 
   const balance = balances.find(b => b.userId === friendId);
@@ -79,7 +81,10 @@ export default function FriendDetail() {
               </div>
 
               {displayBalance !== 0 && (
-                <Button className="w-full mt-4" onClick={() => setShowSettleUp(true)}>
+                <Button 
+                  className="w-full mt-4" 
+                  onClick={() => displayBalance > 0 ? setShowRemind(true) : setShowSettleUp(true)}
+                >
                   {displayBalance > 0 ? 'Remind' : 'Settle Up'}
                 </Button>
               )}
@@ -93,6 +98,13 @@ export default function FriendDetail() {
           friend={balance.user}
           balanceAmount={displayBalance}
           onSettle={handleSettle}
+        />
+
+        <RemindDialog
+          open={showRemind}
+          onOpenChange={setShowRemind}
+          friend={balance.user}
+          balanceAmount={displayBalance}
         />
 
         <Card>
