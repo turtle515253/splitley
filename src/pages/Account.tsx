@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -23,7 +23,8 @@ import {
   Palette,
   Share,
   Coins,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ const menuItems = [
 ];
 
 const Account = () => {
-  const { user, logout } = useAuth();
+  const { profile, logout, isLoading } = useAuth();
   const { currency } = useCurrency();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -48,9 +49,11 @@ const Account = () => {
   const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
     toast.success('Logged out successfully');
     navigate('/auth');
   };
@@ -94,6 +97,23 @@ const Account = () => {
     return item.subtitle;
   };
 
+  const initials = profile?.display_name
+    ?.split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="safe-top">
@@ -113,13 +133,14 @@ const Account = () => {
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 ring-4 ring-primary/20">
-                  <AvatarFallback className="text-xl">
-                    {user?.name?.[0] || 'U'}
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{user?.name || 'User'}</h2>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <h2 className="text-lg font-semibold">{profile?.display_name || 'User'}</h2>
+                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
                   Edit
@@ -214,8 +235,13 @@ const Account = () => {
             variant="outline" 
             className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
             onClick={handleLogout}
+            disabled={isLoggingOut}
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            {isLoggingOut ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4 mr-2" />
+            )}
             Log Out
           </Button>
 

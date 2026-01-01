@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Camera } from 'lucide-react';
+import { Camera, Loader2 } from 'lucide-react';
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -14,27 +14,40 @@ interface EditProfileDialogProps {
 }
 
 export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps) {
-  const { user, updateUser } = useAuth();
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const { profile, updateProfile } = useAuth();
+  const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || '');
+    }
+  }, [profile]);
+
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error('Name cannot be empty');
+    if (!displayName.trim()) {
+      toast.error('Please enter a display name');
       return;
     }
 
     setIsSaving(true);
+    const { error } = await updateProfile({ display_name: displayName.trim() });
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    updateUser({ name: name.trim(), email: email.trim() });
-    toast.success('Profile updated successfully!');
-    onOpenChange(false);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success('Profile updated successfully!');
+      onOpenChange(false);
+    }
     setIsSaving(false);
   };
+
+  const initials = displayName
+    ?.split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,8 +60,9 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
           <div className="flex justify-center">
             <div className="relative">
               <Avatar className="h-24 w-24 ring-4 ring-primary/20">
-                <AvatarFallback className="text-2xl">
-                  {name?.[0]?.toUpperCase() || 'U'}
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <button className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground">
@@ -59,12 +73,13 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="displayName">Display Name</Label>
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter your name"
+                disabled={isSaving}
               />
             </div>
 
@@ -73,20 +88,24 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                value={profile?.email || ''}
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">
+                Email cannot be changed here
+              </p>
             </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>
