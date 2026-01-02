@@ -11,6 +11,7 @@ import { CurrencySelector } from '@/components/settings/CurrencySelector';
 import { AppearanceSelector } from '@/components/settings/AppearanceSelector';
 import { EditProfileDialog } from '@/components/account/EditProfileDialog';
 import { InviteFriendsDialog } from '@/components/account/InviteFriendsDialog';
+import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog';
 import { 
   ChevronRight, 
   Settings, 
@@ -40,6 +41,8 @@ const menuItems = [
   { icon: HelpCircle, label: 'Help & Support', subtitle: 'Get assistance', action: 'help' },
 ];
 
+import { Trash2 } from 'lucide-react';
+
 const Account = () => {
   const { profile, logout, isLoading } = useAuth();
   const { currency } = useCurrency();
@@ -49,6 +52,7 @@ const Account = () => {
   const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -156,6 +160,9 @@ const Account = () => {
         {/* Invite Friends Dialog */}
         <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
 
+        {/* Delete Account Dialog */}
+        <DeleteAccountDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount} />
+
         {/* Currency Selector Modal */}
         {showCurrencySelector && (
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
@@ -243,6 +250,16 @@ const Account = () => {
               <LogOut className="h-4 w-4 mr-2" />
             )}
             Log Out
+          </Button>
+
+          {/* Delete Account Button */}
+          <Button 
+            variant="ghost" 
+            className="w-full mt-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setShowDeleteAccount(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Account
           </Button>
 
           <p className="text-xs text-center text-muted-foreground mt-6">
