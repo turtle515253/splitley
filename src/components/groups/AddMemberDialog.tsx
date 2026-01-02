@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,56 +9,98 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { users } from '@/data/mockData';
-import { User } from '@/types';
 import { toast } from 'sonner';
-import { UserPlus, Mail, Search, Check, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAddGroupMember, useSearchProfiles } from '@/hooks/useGroups';
+import { UserPlus, Mail, Search, Check, X, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface SelectedMember {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
 
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentMembers: User[];
-  onAddMembers: (members: User[]) => void;
-  onInvite: (email: string) => void;
+  groupId: string;
+  currentMemberIds: string[];
 }
 
 export const AddMemberDialog = ({ 
   open, 
   onOpenChange, 
-  currentMembers, 
-  onAddMembers,
-  onInvite 
+  groupId,
+  currentMemberIds,
 }: AddMemberDialogProps) => {
+  const { user } = useAuth();
+  const addMember = useAddGroupMember();
+  const searchProfiles = useSearchProfiles();
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [searchResults, setSearchResults] = useState<SelectedMember[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
 
-  // Filter out already added members and search
-  const availableUsers = users.filter(
-    user => !currentMembers.some(m => m.id === user.id) &&
-    (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     user.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Search for users when query changes
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
-  const toggleMember = (user: User) => {
-    setSelectedMembers(prev => 
-      prev.some(m => m.id === user.id)
-        ? prev.filter(m => m.id !== user.id)
-        : [...prev, user]
+    const debounce = setTimeout(() => {
+      searchProfiles.mutate(searchQuery, {
+        onSuccess: (results) => {
+          // Filter out current user, already selected, and existing members
+          const filtered = results.filter(
+            (profile) =>
+              profile.id !== user?.id &&
+              !currentMemberIds.includes(profile.id) &&
+              !selectedMembers.some((m) => m.id === profile.id)
+          );
+          setSearchResults(filtered);
+        },
+      });
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery, user?.id, currentMemberIds, selectedMembers]);
+
+  const toggleMember = (member: SelectedMember) => {
+    setSelectedMembers((prev) =>
+      prev.some((m) => m.id === member.id)
+        ? prev.filter((m) => m.id !== member.id)
+        : [...prev, member]
     );
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
-  const handleAddMembers = () => {
+  const handleAddMembers = async () => {
     if (selectedMembers.length === 0) {
       toast.error('Please select at least one member');
       return;
     }
-    onAddMembers(selectedMembers);
-    setSelectedMembers([]);
-    setSearchQuery('');
-    onOpenChange(false);
-    toast.success(`Added ${selectedMembers.length} member(s) to the group`);
+
+    setIsAdding(true);
+    try {
+      for (const member of selectedMembers) {
+        await addMember.mutateAsync({
+          groupId,
+          userId: member.id,
+        });
+      }
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      // Error handled in mutation
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleInvite = () => {
@@ -71,14 +113,25 @@ export const AddMemberDialog = ({
       toast.error('Please enter a valid email address');
       return;
     }
-    onInvite(inviteEmail);
+    toast.info(`Invitation sent to ${inviteEmail}. They'll be added once they register.`);
     setInviteEmail('');
     onOpenChange(false);
-    toast.success(`Invitation sent to ${inviteEmail}`);
+  };
+
+  const resetForm = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setSelectedMembers([]);
+    setInviteEmail('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -105,14 +158,20 @@ export const AddMemberDialog = ({
             </div>
             
             <div className="max-h-[200px] overflow-y-auto space-y-2">
-              {availableUsers.length > 0 ? (
-                availableUsers.map((user) => {
-                  const isSelected = selectedMembers.some(m => m.id === user.id);
+              {searchProfiles.isPending && searchQuery.length >= 2 && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              
+              {!searchProfiles.isPending && searchResults.length > 0 ? (
+                searchResults.map((profile) => {
+                  const isSelected = selectedMembers.some((m) => m.id === profile.id);
                   return (
                     <button
-                      key={user.id}
+                      key={profile.id}
                       type="button"
-                      onClick={() => toggleMember(user)}
+                      onClick={() => toggleMember(profile)}
                       className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
                         isSelected 
                           ? 'bg-primary/10 ring-2 ring-primary' 
@@ -120,12 +179,14 @@ export const AddMemberDialog = ({
                       }`}
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.name[0]}</AvatarFallback>
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback>
+                          {(profile.display_name || profile.email || '?')[0].toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 text-left">
-                        <p className="font-medium text-sm">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                        <p className="font-medium text-sm">{profile.display_name || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">{profile.email}</p>
                       </div>
                       {isSelected && (
                         <Check className="h-5 w-5 text-primary" />
@@ -133,12 +194,16 @@ export const AddMemberDialog = ({
                     </button>
                   );
                 })
-              ) : (
+              ) : searchQuery.length >= 2 && !searchProfiles.isPending ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <p className="text-sm">No users found</p>
                   <p className="text-xs mt-1">Try inviting someone new</p>
                 </div>
-              )}
+              ) : searchQuery.length < 2 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p className="text-sm">Type at least 2 characters to search</p>
+                </div>
+              ) : null}
             </div>
             
             {selectedMembers.length > 0 && (
@@ -148,7 +213,7 @@ export const AddMemberDialog = ({
                     key={member.id}
                     className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full text-xs"
                   >
-                    <span>{member.name.split(' ')[0]}</span>
+                    <span>{member.display_name?.split(' ')[0] || member.email?.split('@')[0]}</span>
                     <button onClick={() => toggleMember(member)}>
                       <X className="h-3 w-3" />
                     </button>
@@ -158,11 +223,19 @@ export const AddMemberDialog = ({
             )}
             
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" className="flex-1" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button className="flex-1" onClick={handleAddMembers} disabled={selectedMembers.length === 0}>
-                Add ({selectedMembers.length})
+              <Button 
+                className="flex-1" 
+                onClick={handleAddMembers} 
+                disabled={selectedMembers.length === 0 || isAdding}
+              >
+                {isAdding ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  `Add (${selectedMembers.length})`
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -190,7 +263,7 @@ export const AddMemberDialog = ({
             </div>
             
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" className="flex-1" onClick={handleClose}>
                 Cancel
               </Button>
               <Button className="flex-1" onClick={handleInvite}>

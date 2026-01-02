@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { User } from '@/types';
-import { users, currentUser } from '@/data/mockData';
-import { UserPlus, X, Search, Check, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCreateGroup, useSearchProfiles } from '@/hooks/useGroups';
+import { UserPlus, X, Search, Check, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const emojis = ['🏠', '✈️', '🎉', '🍕', '🎬', '⚽', '🎮', '🛒', '💼', '🎓'];
+
+interface SelectedMember {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
 
 interface NewGroupDialogProps {
   open: boolean;
@@ -23,26 +30,50 @@ interface NewGroupDialogProps {
 }
 
 export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
+  const { user } = useAuth();
+  const createGroup = useCreateGroup();
+  const searchProfiles = useSearchProfiles();
+  
   const [groupName, setGroupName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('🏠');
-  const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<SelectedMember[]>([]);
 
-  const availableUsers = users.filter(
-    user => user.id !== currentUser.id &&
-    !selectedMembers.some(m => m.id === user.id) &&
-    (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     user.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Search for users when query changes
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
-  const toggleMember = (user: User) => {
-    setSelectedMembers(prev => 
-      prev.some(m => m.id === user.id)
-        ? prev.filter(m => m.id !== user.id)
-        : [...prev, user]
+    const debounce = setTimeout(() => {
+      searchProfiles.mutate(searchQuery, {
+        onSuccess: (results) => {
+          // Filter out current user and already selected members
+          const filtered = results.filter(
+            (profile) =>
+              profile.id !== user?.id &&
+              !selectedMembers.some((m) => m.id === profile.id)
+          );
+          setSearchResults(filtered);
+        },
+      });
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery, user?.id, selectedMembers]);
+
+  const toggleMember = (member: SelectedMember) => {
+    setSelectedMembers((prev) =>
+      prev.some((m) => m.id === member.id)
+        ? prev.filter((m) => m.id !== member.id)
+        : [...prev, member]
     );
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   const handleInviteEmail = () => {
@@ -56,45 +87,52 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
       toast.error('This email is already invited');
       return;
     }
-    setPendingInvites(prev => [...prev, inviteEmail]);
+    setPendingInvites((prev) => [...prev, inviteEmail]);
     setInviteEmail('');
     toast.success(`Invitation will be sent to ${inviteEmail}`);
   };
 
   const removeInvite = (email: string) => {
-    setPendingInvites(prev => prev.filter(e => e !== email));
+    setPendingInvites((prev) => prev.filter((e) => e !== email));
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!groupName.trim()) {
       toast.error('Please enter a group name');
       return;
     }
-    
-    const totalMembers = selectedMembers.length + pendingInvites.length + 1;
-    toast.success(`Group "${groupName}" created with ${totalMembers} member(s)!`);
-    
-    if (pendingInvites.length > 0) {
-      toast.info(`${pendingInvites.length} invitation(s) will be sent`);
+
+    try {
+      await createGroup.mutateAsync({
+        name: groupName.trim(),
+        emoji: selectedEmoji,
+        memberIds: selectedMembers.map((m) => m.id),
+      });
+
+      if (pendingInvites.length > 0) {
+        toast.info(`${pendingInvites.length} invitation(s) will be sent`);
+      }
+
+      // Reset form
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      // Error handled in mutation
     }
-    
-    // Reset form
+  };
+
+  const resetForm = () => {
     setGroupName('');
     setSelectedEmoji('🏠');
     setSelectedMembers([]);
     setSearchQuery('');
+    setSearchResults([]);
     setInviteEmail('');
     setPendingInvites([]);
-    onOpenChange(false);
   };
 
   const handleClose = () => {
-    setGroupName('');
-    setSelectedEmoji('🏠');
-    setSelectedMembers([]);
-    setSearchQuery('');
-    setInviteEmail('');
-    setPendingInvites([]);
+    resetForm();
     onOpenChange(false);
   };
 
@@ -104,11 +142,13 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
         <DialogHeader>
           <DialogTitle>Create New Group</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 pt-4">
           {/* Emoji Selection */}
           <div>
-            <Label htmlFor="emoji" className="text-sm font-medium">Choose an emoji</Label>
+            <Label htmlFor="emoji" className="text-sm font-medium">
+              Choose an emoji
+            </Label>
             <div className="flex flex-wrap gap-2 mt-2">
               {emojis.map((emoji) => (
                 <button
@@ -116,8 +156,8 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
                   type="button"
                   onClick={() => setSelectedEmoji(emoji)}
                   className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
-                    selectedEmoji === emoji 
-                      ? 'bg-primary/20 ring-2 ring-primary' 
+                    selectedEmoji === emoji
+                      ? 'bg-primary/20 ring-2 ring-primary'
                       : 'bg-accent hover:bg-accent/80'
                   }`}
                 >
@@ -126,10 +166,12 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
               ))}
             </div>
           </div>
-          
+
           {/* Group Name */}
           <div>
-            <Label htmlFor="groupName" className="text-sm font-medium">Group name</Label>
+            <Label htmlFor="groupName" className="text-sm font-medium">
+              Group name
+            </Label>
             <Input
               id="groupName"
               value={groupName}
@@ -138,20 +180,20 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
               className="mt-2"
             />
           </div>
-          
+
           {/* Add Members */}
           <div>
             <Label className="text-sm font-medium flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Add Members
             </Label>
-            
+
             <Tabs defaultValue="existing" className="mt-2">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="existing">Existing Users</TabsTrigger>
                 <TabsTrigger value="invite">Invite New</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="existing" className="space-y-3 pt-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -162,47 +204,62 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
                     className="pl-9"
                   />
                 </div>
-                
+
                 <div className="max-h-[150px] overflow-y-auto space-y-2">
-                  {availableUsers.length > 0 ? (
-                    availableUsers.map((user) => {
-                      const isSelected = selectedMembers.some(m => m.id === user.id);
+                  {searchProfiles.isPending && searchQuery.length >= 2 && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  
+                  {!searchProfiles.isPending && searchResults.length > 0 ? (
+                    searchResults.map((profile) => {
+                      const isSelected = selectedMembers.some((m) => m.id === profile.id);
                       return (
                         <button
-                          key={user.id}
+                          key={profile.id}
                           type="button"
-                          onClick={() => toggleMember(user)}
+                          onClick={() => toggleMember(profile)}
                           className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all ${
-                            isSelected 
-                              ? 'bg-primary/10 ring-2 ring-primary' 
+                            isSelected
+                              ? 'bg-primary/10 ring-2 ring-primary'
                               : 'bg-accent hover:bg-accent/80'
                           }`}
                         >
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
+                            <AvatarImage src={profile.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {(profile.display_name || profile.email || '?')[0].toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 text-left">
-                            <p className="font-medium text-sm">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                            <p className="font-medium text-sm">
+                              {profile.display_name || 'Unknown'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile.email}
+                            </p>
                           </div>
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
+                          {isSelected && <Check className="h-4 w-4 text-primary" />}
                         </button>
                       );
                     })
-                  ) : (
+                  ) : searchQuery.length >= 2 && !searchProfiles.isPending ? (
                     <div className="text-center py-4 text-muted-foreground">
                       <p className="text-sm">No users found</p>
                     </div>
-                  )}
+                  ) : searchQuery.length < 2 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <p className="text-sm">Type at least 2 characters to search</p>
+                    </div>
+                  ) : null}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="invite" className="space-y-3 pt-3">
                 <p className="text-xs text-muted-foreground">
-                  Invite someone who hasn't joined yet. They'll be added once they register.
+                  Invite someone who hasn't joined yet. They'll be added once they
+                  register.
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -219,23 +276,26 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
               </TabsContent>
             </Tabs>
           </div>
-          
+
           {/* Selected Members & Pending Invites */}
           {(selectedMembers.length > 0 || pendingInvites.length > 0) && (
             <div className="flex flex-wrap gap-2 pt-2 border-t">
               {selectedMembers.map((member) => (
-                <div 
+                <div
                   key={member.id}
                   className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full text-xs"
                 >
-                  <span>{member.name.split(' ')[0]}</span>
+                  <span>
+                    {member.display_name?.split(' ')[0] ||
+                      member.email?.split('@')[0]}
+                  </span>
                   <button onClick={() => toggleMember(member)}>
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
               {pendingInvites.map((email) => (
-                <div 
+                <div
                   key={email}
                   className="flex items-center gap-1 bg-accent text-muted-foreground px-2 py-1 rounded-full text-xs"
                 >
@@ -248,14 +308,22 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
               ))}
             </div>
           )}
-          
+
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={handleClose}>
               Cancel
             </Button>
-            <Button className="flex-1" onClick={handleCreate}>
-              Create Group
+            <Button
+              className="flex-1"
+              onClick={handleCreate}
+              disabled={createGroup.isPending}
+            >
+              {createGroup.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Create Group'
+              )}
             </Button>
           </div>
         </div>
