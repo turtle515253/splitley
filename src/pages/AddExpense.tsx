@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { users, groups, getCategoryIcon } from '@/data/mockData';
+import { getCategoryIcon } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ExpenseCategory } from '@/types';
-import { X, ChevronDown, Check, Camera } from 'lucide-react';
+import { X, ChevronDown, Check, Camera, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useGroups, GroupMember } from '@/hooks/useGroups';
+import { useCreateExpense } from '@/hooks/useExpenses';
 
 const categories: { id: ExpenseCategory; label: string }[] = [
   { id: 'food', label: 'Food & Dining' },
@@ -29,7 +32,11 @@ const AddExpense = () => {
   const [searchParams] = useSearchParams();
   const preselectedGroupId = searchParams.get('groupId');
   
+  const { user } = useAuth();
   const { currency } = useCurrency();
+  const { data: groups = [], isLoading: groupsLoading } = useGroups();
+  const createExpense = useCreateExpense();
+  
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory | null>(null);
@@ -37,18 +44,34 @@ const AddExpense = () => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
-  const [paidBy, setPaidBy] = useState<string>('1'); // '1' = current user (You)
+  const [paidBy, setPaidBy] = useState<string>(user?.id || '');
   const [showPaidByPicker, setShowPaidByPicker] = useState(false);
   const [splitType, setSplitType] = useState<'equally' | 'unequally' | 'percentage'>('equally');
   const [customSplits, setCustomSplits] = useState<Record<string, string>>({});
 
-  // Auto-select all members when group changes or on initial load
+  // Set paidBy to current user when user loads
   useEffect(() => {
-    const members = selectedGroup 
-      ? groups.find(g => g.id === selectedGroup)?.members.filter(m => m.id !== '1') || []
-      : users.filter(u => u.id !== '1');
-    setSelectedMembers(members.map(m => m.id));
-  }, [selectedGroup]);
+    if (user?.id && !paidBy) {
+      setPaidBy(user.id);
+    }
+  }, [user?.id, paidBy]);
+
+  // Get the selected group's members
+  const selectedGroupData = groups.find(g => g.id === selectedGroup);
+  const availableMembers = selectedGroupData?.members.filter(m => m.user_id !== user?.id) || [];
+  const allPossiblePayers = selectedGroupData?.members || [];
+
+  // Auto-select all members when group changes
+  useEffect(() => {
+    if (selectedGroup && selectedGroupData) {
+      const memberIds = selectedGroupData.members
+        .filter(m => m.user_id !== user?.id)
+        .map(m => m.user_id);
+      setSelectedMembers(memberIds);
+    } else {
+      setSelectedMembers([]);
+    }
+  }, [selectedGroup, selectedGroupData, user?.id]);
 
   const toggleMember = (userId: string) => {
     setSelectedMembers(prev => 
@@ -60,30 +83,75 @@ const AddExpense = () => {
 
   const handleSplitTypeChange = (type: 'equally' | 'unequally' | 'percentage') => {
     setSplitType(type);
-    setCustomSplits({}); // Reset custom splits when changing type
+    setCustomSplits({});
   };
 
-  const handleSubmit = () => {
-    if (!description || !amount || selectedMembers.length === 0) {
+  const handleSubmit = async () => {
+    if (!description || !amount || !user) {
       toast.error('Please fill in all required fields');
       return;
     }
+
+    if (!selectedGroup) {
+      toast.error('Please select a group');
+      return;
+    }
+
+    if (selectedMembers.length === 0) {
+      toast.error('Please select at least one member to split with');
+      return;
+    }
     
-    toast.success('Expense added successfully!');
-    navigate('/');
+    const totalAmount = parseFloat(amount);
+    const splitCount = selectedMembers.length + 1; // +1 for current user
+    
+    // Calculate splits
+    const splits: { userId: string; amount: number }[] = [];
+    
+    if (splitType === 'equally') {
+      const splitAmount = totalAmount / splitCount;
+      // Add current user's split
+      splits.push({ userId: user.id, amount: splitAmount });
+      // Add selected members' splits
+      selectedMembers.forEach(memberId => {
+        splits.push({ userId: memberId, amount: splitAmount });
+      });
+    } else if (splitType === 'unequally') {
+      // Add current user's split
+      splits.push({ userId: user.id, amount: parseFloat(customSplits[user.id] || '0') });
+      // Add selected members' splits
+      selectedMembers.forEach(memberId => {
+        splits.push({ userId: memberId, amount: parseFloat(customSplits[memberId] || '0') });
+      });
+    } else {
+      // Percentage
+      // Add current user's split
+      const userPercentage = parseFloat(customSplits[user.id] || '0');
+      splits.push({ userId: user.id, amount: (totalAmount * userPercentage) / 100 });
+      // Add selected members' splits
+      selectedMembers.forEach(memberId => {
+        const percentage = parseFloat(customSplits[memberId] || '0');
+        splits.push({ userId: memberId, amount: (totalAmount * percentage) / 100 });
+      });
+    }
+
+    try {
+      await createExpense.mutateAsync({
+        description,
+        amount: totalAmount,
+        category,
+        groupId: selectedGroup,
+        paidBy,
+        splits,
+      });
+      navigate(-1);
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
-  const currentUser = users.find(u => u.id === '1');
-  
-  const availableMembers = selectedGroup 
-    ? groups.find(g => g.id === selectedGroup)?.members.filter(m => m.id !== '1') || []
-    : users.filter(u => u.id !== '1');
-
-  const allPossiblePayers = selectedGroup
-    ? groups.find(g => g.id === selectedGroup)?.members || []
-    : users;
-
-  const paidByUser = allPossiblePayers.find(u => u.id === paidBy);
+  const currentUserProfile = selectedGroupData?.members.find(m => m.user_id === user?.id);
+  const paidByMember = allPossiblePayers.find(m => m.user_id === paidBy);
 
   const getSplitAmount = (memberId: string) => {
     if (!amount || parseFloat(amount) === 0) return '0.00';
@@ -201,7 +269,7 @@ const AddExpense = () => {
           {/* Group Selection */}
           <Card className="animate-slide-up" style={{ animationDelay: '100ms' }}>
             <CardContent className="p-4">
-              <Label className="text-xs text-muted-foreground">Group (Optional)</Label>
+              <Label className="text-xs text-muted-foreground">Group</Label>
               <button
                 onClick={() => setShowGroupPicker(!showGroupPicker)}
                 className="w-full flex items-center justify-between mt-2"
@@ -278,13 +346,13 @@ const AddExpense = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={paidByUser?.avatar} />
+                      <AvatarImage src={paidByMember?.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">
-                        {paidByUser?.name[0]}
+                        {paidByMember?.display_name?.[0] || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <span className="font-medium">
-                      {paidBy === '1' ? 'You' : paidByUser?.name.split(' ')[0]}
+                      {paidBy === user?.id ? 'You' : paidByMember?.display_name?.split(' ')[0] || 'Unknown'}
                     </span>
                   </div>
                   <ChevronDown className={cn(
@@ -295,28 +363,28 @@ const AddExpense = () => {
 
                 {showPaidByPicker && (
                   <div className="space-y-2 mt-4 pt-4 border-t">
-                    {allPossiblePayers.map((user) => (
+                    {allPossiblePayers.map((member) => (
                       <button
-                        key={user.id}
+                        key={member.user_id}
                         onClick={() => {
-                          setPaidBy(user.id);
+                          setPaidBy(member.user_id);
                           setShowPaidByPicker(false);
                         }}
                         className={cn(
                           "w-full flex items-center gap-3 p-3 rounded-xl transition-all",
-                          paidBy === user.id 
+                          paidBy === member.user_id 
                             ? "bg-primary text-primary-foreground" 
                             : "bg-accent hover:bg-accent/80"
                         )}
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>{user.name[0]}</AvatarFallback>
+                          <AvatarImage src={member.avatar_url || undefined} />
+                          <AvatarFallback>{member.display_name?.[0] || '?'}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">
-                          {user.id === '1' ? 'You' : user.name}
+                          {member.user_id === user?.id ? 'You' : member.display_name || 'Unknown'}
                         </span>
-                        {paidBy === user.id && <Check className="h-4 w-4 ml-auto" />}
+                        {paidBy === member.user_id && <Check className="h-4 w-4 ml-auto" />}
                       </button>
                     ))}
                   </div>
@@ -353,23 +421,23 @@ const AddExpense = () => {
                   <div className="flex flex-wrap gap-2 mt-3">
                     {availableMembers.map((member) => (
                       <button
-                        key={member.id}
-                        onClick={() => toggleMember(member.id)}
+                        key={member.user_id}
+                        onClick={() => toggleMember(member.user_id)}
                         className={cn(
                           "flex items-center gap-2 px-3 py-2 rounded-full transition-all",
-                          selectedMembers.includes(member.id)
+                          selectedMembers.includes(member.user_id)
                             ? "bg-primary text-primary-foreground"
                             : "bg-accent hover:bg-accent/80"
                         )}
                       >
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={member.avatar} />
+                          <AvatarImage src={member.avatar_url || undefined} />
                           <AvatarFallback className="text-xs">
-                            {member.name[0]}
+                            {member.display_name?.[0] || '?'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
-                        {selectedMembers.includes(member.id) && (
+                        <span className="text-sm font-medium">{member.display_name?.split(' ')[0] || 'Unknown'}</span>
+                        {selectedMembers.includes(member.user_id) && (
                           <Check className="h-4 w-4" />
                         )}
                       </button>
@@ -382,8 +450,8 @@ const AddExpense = () => {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 flex-1">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={currentUser?.avatar} />
-                          <AvatarFallback className="text-xs">{currentUser?.name[0]}</AvatarFallback>
+                          <AvatarImage src={currentUserProfile?.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">{currentUserProfile?.display_name?.[0] || '?'}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm font-medium">You</span>
                       </div>
@@ -393,13 +461,13 @@ const AddExpense = () => {
                             <Input
                               type="number"
                               placeholder="0"
-                              value={customSplits['1'] || ''}
-                              onChange={(e) => handleCustomSplitChange('1', e.target.value)}
+                              value={customSplits[user?.id || ''] || ''}
+                              onChange={(e) => handleCustomSplitChange(user?.id || '', e.target.value)}
                               className="w-16 h-9 text-right"
                             />
                             <span className="text-sm text-muted-foreground w-6">%</span>
                             <span className="text-sm text-muted-foreground w-20 text-right">
-                              {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits['1'] || '0')) / 100).toFixed(2) : '0.00'}
+                              {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits[user?.id || ''] || '0')) / 100).toFixed(2) : '0.00'}
                             </span>
                           </>
                         ) : (
@@ -408,8 +476,8 @@ const AddExpense = () => {
                             <Input
                               type="number"
                               placeholder="0.00"
-                              value={customSplits['1'] || ''}
-                              onChange={(e) => handleCustomSplitChange('1', e.target.value)}
+                              value={customSplits[user?.id || ''] || ''}
+                              onChange={(e) => handleCustomSplitChange(user?.id || '', e.target.value)}
                               className="w-24 h-9 text-right"
                             />
                           </>
@@ -419,13 +487,13 @@ const AddExpense = () => {
                     
                     {/* All available members */}
                     {availableMembers.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between gap-3">
+                      <div key={member.user_id} className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 flex-1">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback className="text-xs">{member.name[0]}</AvatarFallback>
+                            <AvatarImage src={member.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs">{member.display_name?.[0] || '?'}</AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium">{member.name.split(' ')[0]}</span>
+                          <span className="text-sm font-medium">{member.display_name?.split(' ')[0] || 'Unknown'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {splitType === 'percentage' ? (
@@ -433,13 +501,13 @@ const AddExpense = () => {
                               <Input
                                 type="number"
                                 placeholder="0"
-                                value={customSplits[member.id] || ''}
-                                onChange={(e) => handleCustomSplitChange(member.id, e.target.value)}
+                                value={customSplits[member.user_id] || ''}
+                                onChange={(e) => handleCustomSplitChange(member.user_id, e.target.value)}
                                 className="w-16 h-9 text-right"
                               />
                               <span className="text-sm text-muted-foreground w-6">%</span>
                               <span className="text-sm text-muted-foreground w-20 text-right">
-                                {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits[member.id] || '0')) / 100).toFixed(2) : '0.00'}
+                                {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits[member.user_id] || '0')) / 100).toFixed(2) : '0.00'}
                               </span>
                             </>
                           ) : (
@@ -448,8 +516,8 @@ const AddExpense = () => {
                               <Input
                                 type="number"
                                 placeholder="0.00"
-                                value={customSplits[member.id] || ''}
-                                onChange={(e) => handleCustomSplitChange(member.id, e.target.value)}
+                                value={customSplits[member.user_id] || ''}
+                                onChange={(e) => handleCustomSplitChange(member.user_id, e.target.value)}
                                 className="w-24 h-9 text-right"
                               />
                             </>
@@ -509,9 +577,16 @@ const AddExpense = () => {
             className="w-full" 
             size="lg"
             onClick={handleSubmit}
-            disabled={!description || !amount || selectedMembers.length === 0}
+            disabled={!description || !amount || selectedMembers.length === 0 || !selectedGroup || createExpense.isPending}
           >
-            Add Expense
+            {createExpense.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Expense'
+            )}
           </Button>
         </div>
       </div>
