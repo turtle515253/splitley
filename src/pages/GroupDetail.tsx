@@ -3,33 +3,31 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { groups, expenses } from '@/data/mockData';
+import { useGroup } from '@/hooks/useGroups';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { User } from '@/types';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
-import { toast } from 'sonner';
 
 const GroupDetail = () => {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { groupId } = useParams();
   
-  const group = groups.find(g => g.id === groupId);
-  const groupExpenses = expenses.filter(e => e.groupId === groupId);
+  const { data: group, isLoading } = useGroup(groupId);
   
-  const [members, setMembers] = useState<User[]>(group?.members || []);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   
-  const handleAddMembers = (newMembers: User[]) => {
-    setMembers(prev => [...prev, ...newMembers]);
-  };
-  
-  const handleInvite = (email: string) => {
-    toast.info(`Invitation sent to ${email}. They'll be added once they register.`);
-  };
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="safe-top flex items-center justify-center h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
   
   if (!group) {
     return (
@@ -58,7 +56,7 @@ const GroupDetail = () => {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{group.emoji}</span>
+                <span className="text-2xl">{group.emoji || '👥'}</span>
                 <h1 className="text-xl font-bold">{group.name}</h1>
               </div>
             </div>
@@ -87,20 +85,26 @@ const GroupDetail = () => {
         {/* Members */}
         <div className="px-5 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Members ({members.length})</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Members ({group.members.length})
+            </h3>
             <Button variant="outline" size="sm" onClick={() => setShowAddMemberDialog(true)}>
               <UserPlus className="h-4 w-4 mr-1" />
               Add
             </Button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {members.map((member) => (
+            {group.members.map((member) => (
               <div key={member.id} className="flex flex-col items-center min-w-[60px]">
                 <Avatar className="h-12 w-12 mb-1">
-                  <AvatarImage src={member.avatar} />
-                  <AvatarFallback>{member.name[0]}</AvatarFallback>
+                  <AvatarImage src={member.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {(member.display_name || member.email || '?')[0].toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="text-xs text-center truncate w-full">{member.name.split(' ')[0]}</span>
+                <span className="text-xs text-center truncate w-full">
+                  {member.display_name?.split(' ')[0] || member.email?.split('@')[0] || 'Unknown'}
+                </span>
               </div>
             ))}
           </div>
@@ -110,8 +114,8 @@ const GroupDetail = () => {
         <div className="px-5 pb-8">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Expenses</h3>
           <div className="space-y-3">
-            {groupExpenses.length > 0 ? (
-              groupExpenses.map((expense) => (
+            {group.expenses.length > 0 ? (
+              group.expenses.map((expense) => (
                 <Card key={expense.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -125,11 +129,11 @@ const GroupDetail = () => {
                         <div>
                           <p className="font-medium">{expense.description}</p>
                           <p className="text-xs text-muted-foreground">
-                            Paid by {expense.paidBy.name} • {format(new Date(expense.createdAt), 'MMM d')}
+                            Paid by {expense.paidByProfile?.display_name || 'Unknown'} • {format(new Date(expense.created_at), 'MMM d')}
                           </p>
                         </div>
                       </div>
-                      <p className="font-semibold">{formatCurrency(expense.amount)}</p>
+                      <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -152,9 +156,8 @@ const GroupDetail = () => {
       <AddMemberDialog
         open={showAddMemberDialog}
         onOpenChange={setShowAddMemberDialog}
-        currentMembers={members}
-        onAddMembers={handleAddMembers}
-        onInvite={handleInvite}
+        groupId={groupId!}
+        currentMemberIds={group.members.map(m => m.user_id)}
       />
     </AppLayout>
   );
