@@ -7,7 +7,6 @@ export interface GroupMember {
   id: string;
   user_id: string;
   display_name: string | null;
-  email: string | null;
   avatar_url: string | null;
 }
 
@@ -79,7 +78,7 @@ export function useGroups() {
             for (const member of members) {
               const { data: profile } = await supabase
                 .from('profiles_display')
-                .select('display_name, email, avatar_url')
+                .select('display_name, avatar_url')
                 .eq('id', member.user_id)
                 .maybeSingle();
 
@@ -87,7 +86,6 @@ export function useGroups() {
                 id: member.id,
                 user_id: member.user_id,
                 display_name: profile?.display_name ?? null,
-                email: profile?.email ?? null,
                 avatar_url: profile?.avatar_url ?? null,
               });
             }
@@ -145,7 +143,7 @@ export function useGroup(groupId: string | undefined) {
         for (const member of members) {
           const { data: profile } = await supabase
             .from('profiles_display')
-            .select('display_name, email, avatar_url')
+            .select('display_name, avatar_url')
             .eq('id', member.user_id)
             .maybeSingle();
 
@@ -153,7 +151,6 @@ export function useGroup(groupId: string | undefined) {
             id: member.id,
             user_id: member.user_id,
             display_name: profile?.display_name ?? null,
-            email: profile?.email ?? null,
             avatar_url: profile?.avatar_url ?? null,
           });
         }
@@ -303,8 +300,8 @@ export function useSearchProfiles() {
       
       const { data, error } = await supabase
         .from('profiles_display')
-        .select('id, display_name, email, avatar_url')
-        .or(`display_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
+        .select('id, display_name, avatar_url')
+        .ilike('display_name', `%${sanitized}%`)
         .limit(10);
 
       if (error) throw error;

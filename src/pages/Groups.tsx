@@ -68,7 +68,7 @@ const Groups = () => {
                               <Avatar key={member.id} className="h-5 w-5 border-2 border-card">
                                 <AvatarImage src={member.avatar_url || undefined} />
                                 <AvatarFallback className="text-[8px]">
-                                  {(member.display_name || member.email || '?')[0].toUpperCase()}
+                                  {(member.display_name || '?')[0].toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                             ))}

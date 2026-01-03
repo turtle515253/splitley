@@ -21,7 +21,6 @@ const emojis = ['🏠', '✈️', '🎉', '🍕', '🎬', '⚽', '🎮', '🛒',
 interface SelectedMember {
   id: string;
   display_name: string | null;
-  email: string | null;
   avatar_url: string | null;
 }
 
@@ -256,15 +255,12 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={profile.avatar_url || undefined} />
                             <AvatarFallback className="text-xs">
-                              {(profile.display_name || profile.email || '?')[0].toUpperCase()}
+                              {(profile.display_name || '?')[0].toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 text-left">
                             <p className="font-medium text-sm">
                               {profile.display_name || 'Unknown'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {profile.email}
                             </p>
                           </div>
                           {isSelected && <Check className="h-4 w-4 text-primary" />}
@@ -314,8 +310,7 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
                   className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full text-xs"
                 >
                   <span>
-                    {member.display_name?.split(' ')[0] ||
-                      member.email?.split('@')[0]}
+                    {member.display_name?.split(' ')[0] || 'Unknown'}
                   </span>
                   <button onClick={() => toggleMember(member)}>
                     <X className="h-3 w-3" />
