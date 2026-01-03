@@ -1,8 +1,8 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { activities, formatRelativeTime } from '@/data/mockData';
+import { useActivities, formatRelativeTime, Activity as ActivityType } from '@/hooks/useActivities';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Plus, CreditCard, Users, Trash } from 'lucide-react';
+import { Plus, CreditCard, Users, Trash, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const activityIcons = {
@@ -23,8 +23,9 @@ const activityColors = {
 
 const Activity = () => {
   const { formatCurrency } = useCurrency();
+  const { data: activities = [], isLoading } = useActivities();
   
-  // Group activities by date
+  // Group activities by relative date
   const groupedActivities = activities.reduce((acc, activity) => {
     const dateKey = formatRelativeTime(activity.createdAt);
     if (!acc[dateKey]) {
@@ -32,7 +33,7 @@ const Activity = () => {
     }
     acc[dateKey].push(activity);
     return acc;
-  }, {} as Record<string, typeof activities>);
+  }, {} as Record<string, ActivityType[]>);
 
   return (
     <AppLayout>
@@ -47,53 +48,57 @@ const Activity = () => {
 
         {/* Activity List */}
         <div className="px-5 space-y-6 pb-8">
-          {Object.entries(groupedActivities).map(([date, items], groupIndex) => (
-            <div key={date} className="animate-fade-in" style={{ animationDelay: `${groupIndex * 100}ms` }}>
-              <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                {date}
-              </h2>
-              <Card>
-                <CardContent className="p-2">
-                  {items.map((activity, index) => {
-                    const Icon = activityIcons[activity.type];
-                    return (
-                      <div
-                        key={activity.id}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer",
-                          index !== items.length - 1 && "border-b border-border/50"
-                        )}
-                      >
-                        <div className={cn(
-                          "p-2 rounded-lg shrink-0",
-                          activityColors[activity.type]
-                        )}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        {activity.amount && (
-                          <span className={cn(
-                            "text-sm font-semibold shrink-0",
-                            activity.type === 'payment_made' && "text-positive",
-                            activity.type === 'expense_added' && "text-foreground"
-                          )}>
-                            {activity.type === 'payment_made' ? '+' : ''}{formatCurrency(activity.amount)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ))}
-
-          {activities.length === 0 && (
+          ) : Object.entries(groupedActivities).length > 0 ? (
+            Object.entries(groupedActivities).map(([date, items], groupIndex) => (
+              <div key={date} className="animate-fade-in" style={{ animationDelay: `${groupIndex * 100}ms` }}>
+                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  {date}
+                </h2>
+                <Card>
+                  <CardContent className="p-2">
+                    {items.map((activity, index) => {
+                      const Icon = activityIcons[activity.type];
+                      return (
+                        <div
+                          key={activity.id}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer",
+                            index !== items.length - 1 && "border-b border-border/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-lg shrink-0",
+                            activityColors[activity.type]
+                          )}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{activity.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {activity.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          {activity.amount && (
+                            <span className={cn(
+                              "text-sm font-semibold shrink-0",
+                              activity.type === 'payment_made' && "text-positive",
+                              activity.type === 'expense_added' && "text-foreground"
+                            )}>
+                              {activity.type === 'payment_made' ? '+' : ''}{formatCurrency(activity.amount)}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </div>
+            ))
+          ) : (
             <Card className="py-12">
               <CardContent className="text-center">
                 <p className="text-muted-foreground">No activity yet</p>
