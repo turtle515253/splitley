@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAddGroupMember, useSearchProfiles } from '@/hooks/useGroups';
+import { supabase } from '@/integrations/supabase/client';
 import { UserPlus, Mail, Search, Check, X, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -103,7 +104,9 @@ export const AddMemberDialog = ({
     }
   };
 
-  const handleInvite = () => {
+  const [isInviting, setIsInviting] = useState(false);
+
+  const handleInvite = async () => {
     if (!inviteEmail.trim()) {
       toast.error('Please enter an email address');
       return;
@@ -113,9 +116,33 @@ export const AddMemberDialog = ({
       toast.error('Please enter a valid email address');
       return;
     }
-    toast.info(`Invitation sent to ${inviteEmail}. They'll be added once they register.`);
-    setInviteEmail('');
-    onOpenChange(false);
+    
+    setIsInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invite', {
+        body: { 
+          email: inviteEmail.trim(),
+          redirectTo: `${window.location.origin}/auth`
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data?.alreadyRegistered) {
+        toast.info('This user is already registered! Search for them in the Existing Users tab.');
+      } else if (data?.success) {
+        toast.success(`Invitation email sent to ${inviteEmail}!`);
+        setInviteEmail('');
+        onOpenChange(false);
+      } else if (data?.error) {
+        toast.error(data.error);
+      }
+    } catch (error: any) {
+      console.error('Invite error:', error);
+      toast.error(error.message || 'Failed to send invitation');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const resetForm = () => {
@@ -266,9 +293,13 @@ export const AddMemberDialog = ({
               <Button variant="outline" className="flex-1" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button className="flex-1" onClick={handleInvite}>
-                <Mail className="h-4 w-4 mr-1" />
-                Send Invite
+              <Button className="flex-1" onClick={handleInvite} disabled={isInviting}>
+                {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                  <>
+                    <Mail className="h-4 w-4 mr-1" />
+                    Send Invite
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
