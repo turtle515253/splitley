@@ -66,6 +66,8 @@ export function useCreateExpense() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
       if (variables.groupId) {
         queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
       }

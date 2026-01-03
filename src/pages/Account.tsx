@@ -7,8 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/hooks/useNotifications';
 import { CurrencySelector } from '@/components/settings/CurrencySelector';
 import { AppearanceSelector } from '@/components/settings/AppearanceSelector';
+import { NotificationsSelector } from '@/components/settings/NotificationsSelector';
 import { EditProfileDialog } from '@/components/account/EditProfileDialog';
 import { InviteFriendsDialog } from '@/components/account/InviteFriendsDialog';
 import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog';
@@ -47,9 +49,11 @@ const Account = () => {
   const { profile, logout, isLoading } = useAuth();
   const { currency } = useCurrency();
   const { theme } = useTheme();
+  const { permission: notificationPermission } = useNotifications();
   const navigate = useNavigate();
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
   const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
+  const [showNotificationsSelector, setShowNotificationsSelector] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
@@ -80,7 +84,7 @@ const Account = () => {
         toast.info('Payment methods coming soon!');
         break;
       case 'notifications':
-        toast.info('Notification settings coming soon!');
+        setShowNotificationsSelector(true);
         break;
       case 'privacy':
         toast.info('Privacy settings coming soon!');
@@ -97,6 +101,9 @@ const Account = () => {
     }
     if (item.action === 'appearance') {
       return theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
+    if (item.action === 'notifications') {
+      return notificationPermission === 'granted' ? 'Enabled' : 'Disabled';
     }
     return item.subtitle;
   };
@@ -203,6 +210,29 @@ const Account = () => {
                 </div>
                 <div className="max-h-[70vh] overflow-y-auto pb-6">
                   <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Selector Modal */}
+        {showNotificationsSelector && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Notifications</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setShowNotificationsSelector(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="max-h-[70vh] overflow-y-auto pb-6">
+                  <NotificationsSelector onClose={() => setShowNotificationsSelector(false)} />
                 </div>
               </div>
             </div>
