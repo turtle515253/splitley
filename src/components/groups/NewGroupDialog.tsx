@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateGroup, useSearchProfiles } from '@/hooks/useGroups';
+import { supabase } from '@/integrations/supabase/client';
 import { UserPlus, X, Search, Check, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -76,7 +77,9 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
     setSearchResults([]);
   };
 
-  const handleInviteEmail = () => {
+  const [isInviting, setIsInviting] = useState(false);
+
+  const handleInviteEmail = async () => {
     if (!inviteEmail.trim()) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inviteEmail)) {
@@ -87,9 +90,33 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
       toast.error('This email is already invited');
       return;
     }
-    setPendingInvites((prev) => [...prev, inviteEmail]);
-    setInviteEmail('');
-    toast.success(`Invitation will be sent to ${inviteEmail}`);
+    
+    setIsInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invite', {
+        body: { 
+          email: inviteEmail.trim(),
+          redirectTo: `${window.location.origin}/auth`
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data?.alreadyRegistered) {
+        toast.info('This user is already registered! Search for them in the Existing Users tab.');
+      } else if (data?.success) {
+        setPendingInvites((prev) => [...prev, inviteEmail]);
+        toast.success(`Invitation email sent to ${inviteEmail}!`);
+        setInviteEmail('');
+      } else if (data?.error) {
+        toast.error(data.error);
+      }
+    } catch (error: any) {
+      console.error('Invite error:', error);
+      toast.error(error.message || 'Failed to send invitation');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const removeInvite = (email: string) => {
@@ -267,10 +294,11 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="friend@example.com"
-                    onKeyDown={(e) => e.key === 'Enter' && handleInviteEmail()}
+                    onKeyDown={(e) => e.key === 'Enter' && !isInviting && handleInviteEmail()}
+                    disabled={isInviting}
                   />
-                  <Button size="sm" onClick={handleInviteEmail}>
-                    <Mail className="h-4 w-4" />
+                  <Button size="sm" onClick={handleInviteEmail} disabled={isInviting}>
+                    {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                   </Button>
                 </div>
               </TabsContent>
