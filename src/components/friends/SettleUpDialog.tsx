@@ -1,25 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { User } from '@/types';
 import { toast } from 'sonner';
+import { useSettleUp } from '@/hooks/useExpenses';
+
+interface Friend {
+  id: string;
+  name: string;
+  avatar?: string;
+}
 
 interface SettleUpDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  friend: User;
+  friend: Friend;
   balanceAmount: number;
-  onSettle: (amount: number) => void;
+  onSettle?: (amount: number) => void;
 }
 
 export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSettle }: SettleUpDialogProps) {
   const { formatCurrency, currency } = useCurrency();
+  const settleUp = useSettleUp();
   const [amount, setAmount] = useState(Math.abs(balanceAmount).toString());
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset amount when dialog opens with new balance
+  useEffect(() => {
+    if (open) {
+      setAmount(Math.abs(balanceAmount).toString());
+    }
+  }, [open, balanceAmount]);
 
   const isYouOwe = balanceAmount < 0;
   const suggestedAmount = Math.abs(balanceAmount);
@@ -31,15 +44,16 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
       return;
     }
 
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    onSettle(numAmount);
-    toast.success(`Payment of ${formatCurrency(numAmount)} recorded!`);
-    onOpenChange(false);
-    setIsSubmitting(false);
+    settleUp.mutate(
+      { friendId: friend.id, amount: numAmount },
+      {
+        onSuccess: () => {
+          toast.success(`Payment of ${formatCurrency(numAmount)} recorded!`);
+          onSettle?.(numAmount);
+          onOpenChange(false);
+        },
+      }
+    );
   };
 
   const handleFullSettle = () => {
@@ -113,8 +127,8 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSettle} disabled={isSubmitting}>
-            {isSubmitting ? 'Recording...' : 'Record Payment'}
+          <Button onClick={handleSettle} disabled={settleUp.isPending}>
+            {settleUp.isPending ? 'Recording...' : 'Record Payment'}
           </Button>
         </DialogFooter>
       </DialogContent>
