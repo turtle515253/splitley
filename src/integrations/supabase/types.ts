@@ -64,13 +64,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_expense_splits_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_display"
-            referencedColumns: ["id"]
-          },
         ]
       }
       expenses: {
@@ -126,13 +119,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_expenses_paid_by"
-            columns: ["paid_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_display"
-            referencedColumns: ["id"]
-          },
         ]
       }
       group_members: {
@@ -167,13 +153,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_group_members_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_display"
             referencedColumns: ["id"]
           },
           {
@@ -216,13 +195,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_groups_created_by"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_display"
             referencedColumns: ["id"]
           },
         ]
@@ -291,20 +263,6 @@ export type Database = {
           id: string | null
           updated_at: string | null
         }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          id?: string | null
-          updated_at?: string | null
-        }
         Relationships: []
       }
     }
@@ -317,6 +275,16 @@ export type Database = {
           _window_seconds: number
         }
         Returns: boolean
+      }
+      get_visible_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }[]
       }
       is_group_creator: {
         Args: { _group_id: string; _user_id: string }
