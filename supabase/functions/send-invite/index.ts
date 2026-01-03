@@ -19,11 +19,33 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Get authorization header to verify the user is authenticated
+    // JWT is automatically verified by Supabase - get the auth header to extract user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("No authorization header present");
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create a Supabase client with the user's token to get user info
+    const supabaseUser = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    // Get the authenticated user (JWT already verified by Supabase)
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user) {
+      console.error("Failed to get user:", userError);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -39,27 +61,6 @@ serve(async (req: Request): Promise<Response> => {
         },
       }
     );
-
-    // Also create a client with the user's token to verify they're authenticated
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    // Verify the user is authenticated
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      console.error("Auth error:", userError);
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
 
     const { email, redirectTo }: InviteRequest = await req.json();
 
@@ -82,7 +83,6 @@ serve(async (req: Request): Promise<Response> => {
     console.log(`Sending invite to ${email} from user ${user.id}`);
 
     // Use the admin API to invite user by email
-    // This will send an email using the configured SMTP settings in Supabase
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo || `${req.headers.get("origin") || Deno.env.get("SUPABASE_URL")}/auth`,
     });

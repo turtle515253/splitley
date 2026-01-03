@@ -12,33 +12,36 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get the authorization header
+    // JWT is automatically verified by Supabase - get the auth header to extract user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("No authorization header present");
       return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
+        JSON.stringify({ error: 'Authorization required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create Supabase client with user's token
+    // Create Supabase client with user's token to get their ID
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Create a client with the user's JWT to get their ID
     const supabaseUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Get the authenticated user
+    // Get the authenticated user (JWT already verified by Supabase)
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     
     if (userError || !user) {
+      console.error("Failed to get user:", userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Deleting account for user ${user.id}`);
 
     // Create admin client to delete the user
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -71,6 +74,8 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Successfully deleted account for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ success: true }),
