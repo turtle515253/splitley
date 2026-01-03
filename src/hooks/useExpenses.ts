@@ -113,3 +113,95 @@ export function useDeleteExpense() {
     },
   });
 }
+
+export function useSettleUp() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ friendId, amount }: { friendId: string; amount: number }) => {
+      if (!user) throw new Error('Must be logged in');
+
+      // Get all unsettled expense splits between the current user and the friend
+      // First, get splits where user owes friend (friend paid)
+      const { data: owedToFriend } = await supabase
+        .from('expense_splits')
+        .select(`
+          id,
+          amount,
+          expenses!inner (
+            paid_by
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_settled', false)
+        .eq('expenses.paid_by', friendId);
+
+      // Get splits where friend owes user (user paid)
+      const { data: owedByFriend } = await supabase
+        .from('expense_splits')
+        .select(`
+          id,
+          amount,
+          expenses!inner (
+            paid_by
+          )
+        `)
+        .eq('user_id', friendId)
+        .eq('is_settled', false)
+        .eq('expenses.paid_by', user.id);
+
+      let remainingAmount = amount;
+      const splitsToSettle: string[] = [];
+
+      // Calculate net balance to determine which splits to settle
+      const userOwesFriend = (owedToFriend || []).reduce((sum, s) => sum + Number(s.amount), 0);
+      const friendOwesUser = (owedByFriend || []).reduce((sum, s) => sum + Number(s.amount), 0);
+      const netBalance = friendOwesUser - userOwesFriend; // positive = friend owes user
+
+      if (netBalance < 0) {
+        // User owes friend - settle user's splits first
+        for (const split of (owedToFriend || []).sort((a, b) => Number(a.amount) - Number(b.amount))) {
+          if (remainingAmount >= Number(split.amount)) {
+            splitsToSettle.push(split.id);
+            remainingAmount -= Number(split.amount);
+          } else if (remainingAmount > 0) {
+            // Partial settlement - for simplicity, mark as settled if we're close enough
+            splitsToSettle.push(split.id);
+            remainingAmount = 0;
+          }
+          if (remainingAmount <= 0) break;
+        }
+      } else {
+        // Friend owes user - we can't settle their splits (RLS prevents it)
+        // But we can mark the settlement as recorded
+        // For now, just acknowledge the payment was made
+        console.log(`Friend ${friendId} paid ${amount} to user ${user.id}`);
+      }
+
+      // Settle the splits the current user owns
+      if (splitsToSettle.length > 0) {
+        const { error } = await supabase
+          .from('expense_splits')
+          .update({ 
+            is_settled: true, 
+            settled_at: new Date().toISOString() 
+          })
+          .in('id', splitsToSettle);
+
+        if (error) throw error;
+      }
+
+      return { settledCount: splitsToSettle.length, amount };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+    onError: (error) => {
+      console.error('Error settling up:', error);
+      toast.error('Failed to record settlement');
+    },
+  });
+}

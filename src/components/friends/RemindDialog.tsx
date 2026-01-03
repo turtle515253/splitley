@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,25 +6,36 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { User } from '@/types';
 import { toast } from 'sonner';
 import { Mail, MessageSquare, Send } from 'lucide-react';
+
+interface Friend {
+  id: string;
+  name: string;
+  avatar?: string;
+}
 
 interface RemindDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  friend: User;
+  friend: Friend;
   balanceAmount: number;
 }
 
 export function RemindDialog({ open, onOpenChange, friend, balanceAmount }: RemindDialogProps) {
   const { formatCurrency } = useCurrency();
   const [method, setMethod] = useState<'email' | 'sms' | 'app'>('app');
-  const [message, setMessage] = useState(
-    `Hey ${friend.name.split(' ')[0]}! Just a friendly reminder that you owe me ${formatCurrency(balanceAmount)}. Let me know when you can settle up!`
-  );
+  const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // Update message when friend or balance changes
+  useEffect(() => {
+    if (open) {
+      setMessage(
+        `Hey ${friend.name.split(' ')[0]}! Just a friendly reminder that you owe me ${formatCurrency(balanceAmount)}. Let me know when you can settle up!`
+      );
+    }
+  }, [open, friend.name, balanceAmount, formatCurrency]);
   const handleSend = async () => {
     setIsSending(true);
     
