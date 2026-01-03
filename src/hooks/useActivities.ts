@@ -10,6 +10,7 @@ export interface Activity {
   description: string;
   amount?: number;
   createdAt: Date;
+  expenseId?: string; // For deletion purposes
 }
 
 export function useActivities() {
@@ -48,6 +49,7 @@ export function useActivities() {
             description: `${payerName} added "${expense.description}"`,
             amount: Number(expense.amount),
             createdAt: new Date(expense.created_at),
+            expenseId: expense.id,
           });
         }
       }

@@ -3,21 +3,27 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useGroup } from '@/hooks/useGroups';
+import { useGroup, GroupMember } from '@/hooks/useGroups';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
+import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 
 const GroupDetail = () => {
   const { formatCurrency } = useCurrency();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { groupId } = useParams();
   
   const { data: group, isLoading } = useGroup(groupId);
   
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
+  
+  const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
     return (
@@ -94,19 +100,30 @@ const GroupDetail = () => {
             </Button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {group.members.map((member) => (
-              <div key={member.id} className="flex flex-col items-center min-w-[60px]">
-                <Avatar className="h-12 w-12 mb-1">
-                  <AvatarImage src={member.avatar_url || undefined} />
-                  <AvatarFallback>
-                    {(member.display_name || member.email || '?')[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-center truncate w-full">
-                  {member.display_name?.split(' ')[0] || member.email?.split('@')[0] || 'Unknown'}
-                </span>
-              </div>
-            ))}
+            {group.members.map((member) => {
+              const canRemove = isCreator && member.user_id !== user?.id;
+              return (
+                <div key={member.id} className="flex flex-col items-center min-w-[60px] relative group">
+                  {canRemove && (
+                    <button
+                      onClick={() => setMemberToRemove(member)}
+                      className="absolute -top-1 -right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  <Avatar className="h-12 w-12 mb-1">
+                    <AvatarImage src={member.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {(member.display_name || member.email || '?')[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-center truncate w-full">
+                    {member.display_name?.split(' ')[0] || member.email?.split('@')[0] || 'Unknown'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -158,6 +175,13 @@ const GroupDetail = () => {
         onOpenChange={setShowAddMemberDialog}
         groupId={groupId!}
         currentMemberIds={group.members.map(m => m.user_id)}
+      />
+      
+      <RemoveMemberDialog
+        open={!!memberToRemove}
+        onOpenChange={(open) => !open && setMemberToRemove(null)}
+        groupId={groupId!}
+        member={memberToRemove}
       />
     </AppLayout>
   );

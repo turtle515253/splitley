@@ -309,3 +309,34 @@ export function useSearchProfiles() {
     },
   });
 }
+
+export function useRemoveGroupMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      groupId,
+      memberId,
+    }: {
+      groupId: string;
+      memberId: string;
+    }) => {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('id', memberId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      toast.success('Member removed successfully!');
+    },
+    onError: (error) => {
+      console.error('Error removing member:', error);
+      toast.error('Failed to remove member');
+    },
+  });
+}
