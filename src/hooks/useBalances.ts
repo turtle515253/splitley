@@ -77,7 +77,7 @@ export function useBalances() {
       if (userIds.length === 0) return [];
 
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_display')
         .select('id, display_name, avatar_url')
         .in('id', userIds);
 

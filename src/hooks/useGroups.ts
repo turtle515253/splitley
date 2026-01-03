@@ -78,7 +78,7 @@ export function useGroups() {
           if (members) {
             for (const member of members) {
               const { data: profile } = await supabase
-                .from('profiles')
+                .from('profiles_display')
                 .select('display_name, email, avatar_url')
                 .eq('id', member.user_id)
                 .maybeSingle();
@@ -144,7 +144,7 @@ export function useGroup(groupId: string | undefined) {
       if (members) {
         for (const member of members) {
           const { data: profile } = await supabase
-            .from('profiles')
+            .from('profiles_display')
             .select('display_name, email, avatar_url')
             .eq('id', member.user_id)
             .maybeSingle();
@@ -169,7 +169,7 @@ export function useGroup(groupId: string | undefined) {
       const expensesWithPayer = await Promise.all(
         (expenses ?? []).map(async (expense) => {
           const { data: profile } = await supabase
-            .from('profiles')
+            .from('profiles_display')
             .select('display_name, avatar_url')
             .eq('id', expense.paid_by)
             .maybeSingle();
@@ -299,7 +299,7 @@ export function useSearchProfiles() {
   return useMutation({
     mutationFn: async (searchQuery: string) => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_display')
         .select('id, display_name, email, avatar_url')
         .or(`display_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
         .limit(10);
