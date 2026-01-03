@@ -123,11 +123,11 @@ const GroupDetail = () => {
                   <Avatar className="h-12 w-12 mb-1">
                     <AvatarImage src={member.avatar_url || undefined} />
                     <AvatarFallback>
-                      {(member.display_name || member.email || '?')[0].toUpperCase()}
+                      {(member.display_name || '?')[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs text-center truncate w-full">
-                    {member.display_name?.split(' ')[0] || member.email?.split('@')[0] || 'Unknown'}
+                    {member.display_name?.split(' ')[0] || 'Unknown'}
                   </span>
                 </div>
               );

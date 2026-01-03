@@ -40,7 +40,7 @@ export function RemoveMemberDialog({
 
   if (!member) return null;
 
-  const displayName = member.display_name || member.email?.split('@')[0] || 'Unknown';
+  const displayName = member.display_name || 'Unknown';
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -57,9 +57,6 @@ export function RemoveMemberDialog({
               </Avatar>
               <div>
                 <p className="font-medium text-foreground">{displayName}</p>
-                {member.email && (
-                  <p className="text-xs text-muted-foreground">{member.email}</p>
-                )}
               </div>
             </div>
             <p>
