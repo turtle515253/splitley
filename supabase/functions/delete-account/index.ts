@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limit: 1 request per hour for account deletion
+const RATE_LIMIT_MAX_REQUESTS = 1;
+const RATE_LIMIT_WINDOW_SECONDS = 3600; // 1 hour
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -41,12 +45,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Deleting account for user ${user.id}`);
-
-    // Create admin client to delete the user
+    // Create admin client for operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
+
+    // Check rate limit
+    const { data: rateLimitAllowed, error: rateLimitError } = await supabaseAdmin.rpc(
+      'check_rate_limit',
+      {
+        _user_id: user.id,
+        _action: 'delete-account',
+        _max_requests: RATE_LIMIT_MAX_REQUESTS,
+        _window_seconds: RATE_LIMIT_WINDOW_SECONDS,
+      }
+    );
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+      // Continue without rate limiting if there's an error
+    } else if (!rateLimitAllowed) {
+      console.log(`Rate limit exceeded for user ${user.id} on delete-account`);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Deleting account for user ${user.id}`);
 
     // Delete user's data first (cascade should handle most, but being explicit)
     // Delete expense splits where user is involved
@@ -63,6 +89,9 @@ Deno.serve(async (req) => {
     
     // Delete profile
     await supabaseAdmin.from('profiles').delete().eq('id', user.id);
+
+    // Delete rate limit records for this user
+    await supabaseAdmin.from('rate_limits').delete().eq('user_id', user.id);
 
     // Finally, delete the user from auth.users
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);

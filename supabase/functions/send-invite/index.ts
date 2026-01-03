@@ -7,6 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limit: 10 requests per hour for sending invites
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_WINDOW_SECONDS = 3600; // 1 hour
+
 interface InviteRequest {
   email: string;
   redirectTo?: string;
@@ -61,6 +65,28 @@ serve(async (req: Request): Promise<Response> => {
         },
       }
     );
+
+    // Check rate limit
+    const { data: rateLimitAllowed, error: rateLimitError } = await supabaseAdmin.rpc(
+      'check_rate_limit',
+      {
+        _user_id: user.id,
+        _action: 'send-invite',
+        _max_requests: RATE_LIMIT_MAX_REQUESTS,
+        _window_seconds: RATE_LIMIT_WINDOW_SECONDS,
+      }
+    );
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+      // Continue without rate limiting if there's an error
+    } else if (!rateLimitAllowed) {
+      console.log(`Rate limit exceeded for user ${user.id} on send-invite`);
+      return new Response(
+        JSON.stringify({ error: "Too many invite requests. Please try again later." }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     const { email, redirectTo }: InviteRequest = await req.json();
 
