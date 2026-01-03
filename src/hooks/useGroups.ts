@@ -298,10 +298,13 @@ export function useAddGroupMember() {
 export function useSearchProfiles() {
   return useMutation({
     mutationFn: async (searchQuery: string) => {
+      // Sanitize input to prevent SQL injection
+      const sanitized = searchQuery.replace(/[%_\\]/g, '\\$&');
+      
       const { data, error } = await supabase
         .from('profiles_display')
         .select('id, display_name, email, avatar_url')
-        .or(`display_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .or(`display_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
         .limit(10);
 
       if (error) throw error;
