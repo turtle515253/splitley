@@ -77,3 +77,37 @@ export function useCreateExpense() {
     },
   });
 }
+
+export function useDeleteExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (expenseId: string) => {
+      // Delete expense splits first (cascade should handle this but being explicit)
+      const { error: splitsError } = await supabase
+        .from('expense_splits')
+        .delete()
+        .eq('expense_id', expenseId);
+
+      if (splitsError) throw splitsError;
+
+      // Delete the expense
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      toast.success('Expense deleted successfully!');
+    },
+    onError: (error) => {
+      console.error('Error deleting expense:', error);
+      toast.error('Failed to delete expense');
+    },
+  });
+}

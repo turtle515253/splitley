@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useActivities, formatRelativeTime, Activity as ActivityType } from '@/hooks/useActivities';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Plus, CreditCard, Users, Trash, Loader2 } from 'lucide-react';
+import { Plus, CreditCard, Users, Trash, Loader2, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 
 const activityIcons = {
   expense_added: Plus,
@@ -24,6 +33,7 @@ const activityColors = {
 const Activity = () => {
   const { formatCurrency } = useCurrency();
   const { data: activities = [], isLoading } = useActivities();
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
   
   // Group activities by relative date
   const groupedActivities = activities.reduce((acc, activity) => {
@@ -91,6 +101,27 @@ const Activity = () => {
                               {activity.type === 'payment_made' ? '+' : ''}{formatCurrency(activity.amount)}
                             </span>
                           )}
+                          {activity.type === 'expense_added' && activity.expenseId && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setExpenseToDelete({
+                                    id: activity.expenseId!,
+                                    description: activity.description.replace(/^(You|Someone) added "/, '').replace(/"$/, '')
+                                  })}
+                                >
+                                  <Trash className="h-4 w-4 mr-2" />
+                                  Delete Expense
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       );
                     })}
@@ -107,6 +138,13 @@ const Activity = () => {
           )}
         </div>
       </div>
+      
+      <DeleteExpenseDialog
+        open={!!expenseToDelete}
+        onOpenChange={(open) => !open && setExpenseToDelete(null)}
+        expenseId={expenseToDelete?.id ?? null}
+        expenseDescription={expenseToDelete?.description ?? ''}
+      />
     </AppLayout>
   );
 };
