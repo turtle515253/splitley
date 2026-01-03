@@ -6,11 +6,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroup, GroupMember } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X, MoreVertical, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
+import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const GroupDetail = () => {
   const { formatCurrency } = useCurrency();
@@ -22,6 +29,7 @@ const GroupDetail = () => {
   
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
   
   const isCreator = group?.created_by === user?.id;
   
@@ -150,7 +158,27 @@ const GroupDetail = () => {
                           </p>
                         </div>
                       </div>
-                      <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
+                        {expense.paid_by === user?.id && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setExpenseToDelete({ id: expense.id, description: expense.description })}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -182,6 +210,13 @@ const GroupDetail = () => {
         onOpenChange={(open) => !open && setMemberToRemove(null)}
         groupId={groupId!}
         member={memberToRemove}
+      />
+      
+      <DeleteExpenseDialog
+        open={!!expenseToDelete}
+        onOpenChange={(open) => !open && setExpenseToDelete(null)}
+        expenseId={expenseToDelete?.id || null}
+        expenseDescription={expenseToDelete?.description || ''}
       />
     </AppLayout>
   );
