@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Wallet, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import splitlelyLogo from '@/assets/Splitley_Logo.png';
 
 const loginSchema = z.object({
   email: z.string().trim().email('Please enter a valid email'),
@@ -107,10 +108,12 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <Wallet className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">SplitWise</h1>
+          <img 
+            src={splitlelyLogo} 
+            alt="Splitley Logo" 
+            className="w-24 h-24 mx-auto mb-4"
+          />
+          <h1 className="text-2xl font-bold text-foreground">Splitley</h1>
           <p className="text-muted-foreground">Split expenses with friends, simplified</p>
         </div>
 
