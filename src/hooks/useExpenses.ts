@@ -80,6 +80,83 @@ export function useCreateExpense() {
   });
 }
 
+interface UpdateExpenseParams {
+  expenseId: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  paidBy: string;
+  splits: ExpenseSplit[];
+  groupId: string | null;
+}
+
+export function useUpdateExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      expenseId,
+      description,
+      amount,
+      category,
+      paidBy,
+      splits,
+      groupId,
+    }: UpdateExpenseParams) => {
+      // Update the expense
+      const { error: expenseError } = await supabase
+        .from('expenses')
+        .update({
+          description,
+          amount,
+          category,
+          paid_by: paidBy,
+        })
+        .eq('id', expenseId);
+
+      if (expenseError) throw expenseError;
+
+      // Delete existing splits
+      const { error: deleteError } = await supabase
+        .from('expense_splits')
+        .delete()
+        .eq('expense_id', expenseId);
+
+      if (deleteError) throw deleteError;
+
+      // Create new expense splits
+      if (splits.length > 0) {
+        const splitInserts = splits.map((split) => ({
+          expense_id: expenseId,
+          user_id: split.userId,
+          amount: split.amount,
+        }));
+
+        const { error: splitsError } = await supabase
+          .from('expense_splits')
+          .insert(splitInserts);
+
+        if (splitsError) throw splitsError;
+      }
+
+      return { expenseId };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      if (variables.groupId) {
+        queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      }
+      toast.success('Expense updated successfully!');
+    },
+    onError: (error) => {
+      console.error('Error updating expense:', error);
+      toast.error('Failed to update expense');
+    },
+  });
+}
+
 export function useDeleteExpense() {
   const queryClient = useQueryClient();
 

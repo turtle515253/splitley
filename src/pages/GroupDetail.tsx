@@ -6,12 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroup, GroupMember } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X, MoreVertical, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
+import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,15 @@ const GroupDetail = () => {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
-  
+  const [expenseToEdit, setExpenseToEdit] = useState<{
+    id: string;
+    description: string;
+    amount: number;
+    category: string | null;
+    paid_by: string;
+    group_id: string;
+    splits?: { user_id: string; amount: number }[];
+  } | null>(null);
   const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
@@ -169,6 +178,20 @@ const GroupDetail = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
+                                onClick={() => setExpenseToEdit({
+                                  id: expense.id,
+                                  description: expense.description,
+                                  amount: Number(expense.amount),
+                                  category: expense.category,
+                                  paid_by: expense.paid_by,
+                                  group_id: groupId!,
+                                  splits: expense.splits,
+                                })}
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => setExpenseToDelete({ id: expense.id, description: expense.description })}
                               >
@@ -217,6 +240,13 @@ const GroupDetail = () => {
         onOpenChange={(open) => !open && setExpenseToDelete(null)}
         expenseId={expenseToDelete?.id || null}
         expenseDescription={expenseToDelete?.description || ''}
+      />
+      
+      <EditExpenseDialog
+        open={!!expenseToEdit}
+        onOpenChange={(open) => !open && setExpenseToEdit(null)}
+        expense={expenseToEdit}
+        groupMembers={group.members}
       />
     </AppLayout>
   );
