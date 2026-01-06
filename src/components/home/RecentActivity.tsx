@@ -46,9 +46,20 @@ export function RecentActivity() {
         ) : recentActivities.length > 0 ? (
           recentActivities.map((activity, index) => {
             const Icon = activityIcons[activity.type];
+            
+            const handleActivityClick = () => {
+              if (activity.type === 'expense_added' && activity.groupId) {
+                navigate(`/group/${activity.groupId}`);
+              } else if (activity.type === 'group_created') {
+                const groupId = activity.id.replace('group-', '');
+                navigate(`/group/${groupId}`);
+              }
+            };
+            
             return (
               <div
                 key={activity.id}
+                onClick={handleActivityClick}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer animate-slide-up"
                 )}
