@@ -50,10 +50,10 @@ export function RecentActivity() {
             
             const handleActivityClick = () => {
               if (activity.type === 'expense_added' && activity.groupId) {
-                navigate(`/group/${activity.groupId}`);
+                navigate(`/groups/${activity.groupId}`);
               } else if (activity.type === 'group_created') {
                 const groupId = activity.id.replace('group-', '');
-                navigate(`/group/${groupId}`);
+                navigate(`/groups/${groupId}`);
               }
             };
             
