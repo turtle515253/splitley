@@ -46,6 +46,7 @@ export function RecentActivity() {
         ) : recentActivities.length > 0 ? (
           recentActivities.map((activity, index) => {
             const Icon = activityIcons[activity.type];
+            const isClickable = (activity.type === 'expense_added' && activity.groupId) || activity.type === 'group_created';
             
             const handleActivityClick = () => {
               if (activity.type === 'expense_added' && activity.groupId) {
@@ -59,9 +60,10 @@ export function RecentActivity() {
             return (
               <div
                 key={activity.id}
-                onClick={handleActivityClick}
+                onClick={isClickable ? handleActivityClick : undefined}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer animate-slide-up"
+                  "flex items-center gap-3 p-3 rounded-xl transition-colors animate-slide-up",
+                  isClickable && "hover:bg-accent/50 cursor-pointer"
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -81,6 +83,9 @@ export function RecentActivity() {
                   <span className="text-sm font-semibold">
                     {formatCurrency(activity.amount)}
                   </span>
+                )}
+                {isClickable && (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 )}
               </div>
             );
