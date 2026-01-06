@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroup, GroupMember } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, Loader2, X, MoreVertical, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, X, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
@@ -45,8 +46,62 @@ const GroupDetail = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="safe-top flex items-center justify-center h-[50vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="safe-top">
+          <header className="px-5 pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded" />
+                <Skeleton className="h-6 w-32" />
+              </div>
+              <Skeleton className="h-9 w-9 rounded-md" />
+            </div>
+            <Card className="bg-primary/10 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-28" />
+                  </div>
+                  <Skeleton className="h-9 w-28 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          </header>
+          <div className="px-5 mb-6">
+            <Skeleton className="h-4 w-24 mb-3" />
+            <div className="flex gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col items-center min-w-[60px]">
+                  <Skeleton className="h-12 w-12 rounded-full mb-1" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="px-5 pb-8">
+            <Skeleton className="h-4 w-16 mb-3" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-40" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </AppLayout>
     );

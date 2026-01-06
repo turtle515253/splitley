@@ -1,7 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useBalances } from '@/hooks/useBalances';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
 
 export function BalanceCard() {
   const { formatCurrency } = useCurrency();
@@ -28,8 +29,9 @@ export function BalanceCard() {
           <span className="text-sm font-medium opacity-90">Total Balance</span>
         </div>
         {isLoading ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-40 bg-primary-foreground/20" />
+            <Skeleton className="h-4 w-28 bg-primary-foreground/20" />
           </div>
         ) : (
           <>
@@ -50,9 +52,13 @@ export function BalanceCard() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">You're owed</p>
-              <p className="text-lg font-semibold text-positive">
-                {isLoading ? '...' : formatCurrency(totalOwed)}
-              </p>
+              {isLoading ? (
+                <Skeleton className="h-6 w-16" />
+              ) : (
+                <p className="text-lg font-semibold text-positive">
+                  {formatCurrency(totalOwed)}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 rounded-xl bg-negative-muted">
@@ -61,9 +67,13 @@ export function BalanceCard() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">You owe</p>
-              <p className="text-lg font-semibold text-negative">
-                {isLoading ? '...' : formatCurrency(totalOwe)}
-              </p>
+              {isLoading ? (
+                <Skeleton className="h-6 w-16" />
+              ) : (
+                <p className="text-lg font-semibold text-negative">
+                  {formatCurrency(totalOwe)}
+                </p>
+              )}
             </div>
           </div>
         </div>

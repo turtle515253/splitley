@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroups } from '@/hooks/useGroups';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Plus, ChevronRight, Users, Loader2 } from 'lucide-react';
+import { Plus, ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NewGroupDialog } from '@/components/groups/NewGroupDialog';
 
@@ -37,8 +38,36 @@ const Groups = () => {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="px-5 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-12 h-12 rounded-xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-2">
+                            {[...Array(3)].map((_, j) => (
+                              <Skeleton key={j} className="h-5 w-5 rounded-full" />
+                            ))}
+                          </div>
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right space-y-1">
+                        <Skeleton className="h-3 w-8" />
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                      <Skeleton className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 
