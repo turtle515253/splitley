@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useActivities, formatRelativeTime } from '@/hooks/useActivities';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ChevronRight, Plus, CreditCard, Users, Trash, Loader2 } from 'lucide-react';
+import { ChevronRight, Plus, CreditCard, Users, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,8 +41,17 @@ export function RecentActivity() {
       </CardHeader>
       <CardContent className="space-y-2">
         {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <Skeleton className="h-4 w-12" />
+              </div>
+            ))}
           </div>
         ) : recentActivities.length > 0 ? (
           recentActivities.map((activity, index) => {
