@@ -28,7 +28,7 @@ export function useBalances() {
         .select(`
           id,
           amount,
-          expense_splits (
+          expense_splits!fk_expense_splits_expense_id (
             user_id,
             amount,
             is_settled
@@ -57,7 +57,7 @@ export function useBalances() {
         .select(`
           amount,
           is_settled,
-          expenses (
+          expenses!fk_expense_splits_expense_id (
             paid_by
           )
         `)
