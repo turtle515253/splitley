@@ -32,6 +32,7 @@ export interface GroupWithDetails extends Group {
       display_name: string | null;
       avatar_url: string | null;
     } | null;
+    splits: { user_id: string; amount: number }[];
   }[];
 }
 
@@ -171,9 +172,16 @@ export function useGroup(groupId: string | undefined) {
             .eq('id', expense.paid_by)
             .maybeSingle();
 
+          // Fetch splits for this expense
+          const { data: splits } = await supabase
+            .from('expense_splits')
+            .select('user_id, amount')
+            .eq('expense_id', expense.id);
+
           return {
             ...expense,
             paidByProfile: profile,
+            splits: splits?.map(s => ({ user_id: s.user_id, amount: Number(s.amount) })) ?? [],
           };
         })
       );
