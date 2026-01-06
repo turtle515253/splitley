@@ -303,17 +303,16 @@ export function useAddGroupMember() {
 export function useSearchProfiles() {
   return useMutation({
     mutationFn: async (searchQuery: string) => {
-      // Sanitize input to prevent SQL injection
-      const sanitized = searchQuery.replace(/[%_\\]/g, '\\$&');
-      
+      // Use the security definer function for profile discovery
+      // This bypasses RLS safely and only returns non-sensitive fields
       const { data, error } = await supabase
-        .from('profiles_display')
-        .select('id, display_name, avatar_url')
-        .ilike('display_name', `%${sanitized}%`)
-        .limit(10);
+        .rpc('search_profiles_for_discovery', {
+          _search_query: searchQuery,
+          _limit: 10
+        });
 
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as { id: string; display_name: string | null; avatar_url: string | null }[];
     },
   });
 }
