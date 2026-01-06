@@ -36,7 +36,7 @@ export function useBalances() {
         `)
         .eq('paid_by', user.id);
 
-      console.log('useBalances - paidExpenses:', paidExpenses, 'error:', paidError);
+      
 
       if (paidExpenses) {
         for (const expense of paidExpenses) {
@@ -64,7 +64,7 @@ export function useBalances() {
         .eq('user_id', user.id)
         .or('is_settled.eq.false,is_settled.is.null');
 
-      console.log('useBalances - owedSplits:', owedSplits, 'error:', owedError);
+      
 
       if (owedSplits) {
         for (const split of owedSplits) {
@@ -77,7 +77,7 @@ export function useBalances() {
         }
       }
 
-      console.log('useBalances - balanceMap:', Object.fromEntries(balanceMap));
+      
 
       // Get profiles for all users in the balance map
       const userIds = Array.from(balanceMap.keys());
