@@ -332,6 +332,14 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      search_profiles_for_discovery: {
+        Args: { _limit?: number; _search_query: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+        }[]
+      }
       users_share_group: {
         Args: { _user_id1: string; _user_id2: string }
         Returns: boolean
