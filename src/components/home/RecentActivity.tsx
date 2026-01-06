@@ -76,6 +76,8 @@ export function RecentActivity() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{activity.description}</p>
                   <p className="text-xs text-muted-foreground">
+                    {activity.groupName && <span className="text-primary">{activity.groupName}</span>}
+                    {activity.groupName && ' · '}
                     {formatRelativeTime(activity.createdAt)}
                   </p>
                 </div>

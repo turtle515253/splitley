@@ -12,6 +12,7 @@ export interface Activity {
   createdAt: Date;
   expenseId?: string;
   groupId?: string;
+  groupName?: string;
 }
 
 export function useActivities() {
@@ -34,7 +35,8 @@ export function useActivities() {
           created_at,
           paid_by,
           group_id,
-          profiles:paid_by (display_name)
+          profiles:paid_by (display_name),
+          groups:group_id (name)
         `)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -44,6 +46,7 @@ export function useActivities() {
           const payerName = expense.paid_by === user.id 
             ? 'You' 
             : (expense.profiles as any)?.display_name || 'Someone';
+          const groupName = (expense.groups as any)?.name;
           
           activities.push({
             id: `expense-${expense.id}`,
@@ -53,6 +56,7 @@ export function useActivities() {
             createdAt: new Date(expense.created_at),
             expenseId: expense.id,
             groupId: expense.group_id || undefined,
+            groupName: groupName || undefined,
           });
         }
       }
