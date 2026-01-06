@@ -1,15 +1,32 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - restrict to known domains
+const allowedOrigins = [
+  'https://zlmmflrlkvzvcaxuokhx.lovableproject.com',
+  'https://id-preview--zlmmflrlkvzvcaxuokhx.lovableproject.com',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  // Check if origin matches allowed list or is a preview subdomain
+  const isAllowed = allowedOrigins.includes(origin) || 
+    origin.match(/^https:\/\/[a-z0-9-]+--zlmmflrlkvzvcaxuokhx\.lovableproject\.com$/);
+  
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 // Rate limit: 1 request per hour for account deletion
 const RATE_LIMIT_MAX_REQUESTS = 1;
 const RATE_LIMIT_WINDOW_SECONDS = 3600; // 1 hour
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
