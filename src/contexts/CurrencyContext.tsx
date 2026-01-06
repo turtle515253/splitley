@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Currency {
   code: string;
@@ -39,13 +40,70 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     }
     return currencies[0];
   });
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Listen for auth state changes and load currency from profile
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const newUserId = session?.user?.id ?? null;
+        setUserId(newUserId);
+        
+        if (newUserId && !isInitialized) {
+          // Defer to avoid deadlock
+          setTimeout(() => {
+            loadCurrencyFromProfile(newUserId);
+          }, 0);
+        }
+      }
+    );
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const newUserId = session?.user?.id ?? null;
+      setUserId(newUserId);
+      
+      if (newUserId) {
+        loadCurrencyFromProfile(newUserId);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadCurrencyFromProfile = async (uid: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('currency')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (!error && data?.currency) {
+      const savedCurrency = currencies.find(c => c.code === data.currency);
+      if (savedCurrency) {
+        setCurrencyState(savedCurrency);
+        localStorage.setItem(CURRENCY_STORAGE_KEY, JSON.stringify(savedCurrency));
+      }
+    }
+    setIsInitialized(true);
+  };
+
+  // Save to localStorage whenever currency changes
   useEffect(() => {
     localStorage.setItem(CURRENCY_STORAGE_KEY, JSON.stringify(currency));
   }, [currency]);
 
-  const setCurrency = (newCurrency: Currency) => {
+  const setCurrency = async (newCurrency: Currency) => {
     setCurrencyState(newCurrency);
+    
+    // Save to database if user is logged in
+    if (userId) {
+      await supabase
+        .from('profiles')
+        .update({ currency: newCurrency.code })
+        .eq('id', userId);
+    }
   };
 
   const formatCurrency = (amount: number): string => {
