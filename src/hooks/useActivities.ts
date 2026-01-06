@@ -10,7 +10,8 @@ export interface Activity {
   description: string;
   amount?: number;
   createdAt: Date;
-  expenseId?: string; // For deletion purposes
+  expenseId?: string;
+  groupId?: string;
 }
 
 export function useActivities() {
@@ -32,6 +33,7 @@ export function useActivities() {
           amount,
           created_at,
           paid_by,
+          group_id,
           profiles:paid_by (display_name)
         `)
         .order('created_at', { ascending: false })
@@ -50,6 +52,7 @@ export function useActivities() {
             amount: Number(expense.amount),
             createdAt: new Date(expense.created_at),
             expenseId: expense.id,
+            groupId: expense.group_id || undefined,
           });
         }
       }
