@@ -1,7 +1,7 @@
 project_id = "zlmmflrlkvzvcaxuokhx"
 
 [functions.send-invite]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-account]
-verify_jwt = true
+verify_jwt = false
