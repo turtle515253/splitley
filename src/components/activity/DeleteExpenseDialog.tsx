@@ -15,6 +15,7 @@ interface DeleteExpenseDialogProps {
   onOpenChange: (open: boolean) => void;
   expenseId: string | null;
   expenseDescription: string;
+  groupId?: string | null;
 }
 
 export function DeleteExpenseDialog({
@@ -22,12 +23,13 @@ export function DeleteExpenseDialog({
   onOpenChange,
   expenseId,
   expenseDescription,
+  groupId,
 }: DeleteExpenseDialogProps) {
   const { mutate: deleteExpense, isPending } = useDeleteExpense();
 
   const handleDelete = () => {
     if (!expenseId) return;
-    deleteExpense(expenseId, {
+    deleteExpense({ expenseId, groupId }, {
       onSuccess: () => {
         onOpenChange(false);
       },

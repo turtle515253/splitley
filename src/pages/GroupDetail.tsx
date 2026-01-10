@@ -298,6 +298,7 @@ const GroupDetail = () => {
         onOpenChange={(open) => !open && setExpenseToDelete(null)}
         expenseId={expenseToDelete?.id || null}
         expenseDescription={expenseToDelete?.description || ''}
+        groupId={groupId}
       />
       
       <EditExpenseDialog
