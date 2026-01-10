@@ -64,13 +64,14 @@ export function useCreateExpense() {
 
       return expense;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
-      if (variables.groupId) {
-        queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
-      }
+    onSuccess: async (_, variables) => {
+      // Use Promise.all to wait for all invalidations to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['activities'] }),
+        queryClient.invalidateQueries({ queryKey: ['balances'] }),
+        variables.groupId ? queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
+      ]);
       toast.success('Expense added successfully!');
     },
     onError: (error) => {
@@ -141,13 +142,14 @@ export function useUpdateExpense() {
 
       return { expenseId };
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
-      if (variables.groupId) {
-        queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
-      }
+    onSuccess: async (_, variables) => {
+      // Use Promise.all to wait for all invalidations to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['activities'] }),
+        queryClient.invalidateQueries({ queryKey: ['balances'] }),
+        variables.groupId ? queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
+      ]);
       toast.success('Expense updated successfully!');
     },
     onError: (error) => {
