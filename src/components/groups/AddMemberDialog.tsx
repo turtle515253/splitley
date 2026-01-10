@@ -125,7 +125,10 @@ export const AddMemberDialog = ({
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to send a request to the Edge Function');
+      }
       
       if (data?.alreadyRegistered) {
         toast.info('This user is already registered! Search for them in the Existing Users tab.');
@@ -134,11 +137,22 @@ export const AddMemberDialog = ({
         setInviteEmail('');
         onOpenChange(false);
       } else if (data?.error) {
-        toast.error(data.error);
+        // Handle rate limit error specifically
+        if (data.error.includes('Too many')) {
+          toast.error('You have sent too many invites. Please try again later.');
+        } else {
+          toast.error(data.error);
+        }
       }
     } catch (error: any) {
       console.error('Invite error:', error);
-      toast.error(error.message || 'Failed to send invitation');
+      // Provide more specific error messages
+      const message = error.message || 'Failed to send invitation';
+      if (message.includes('rate') || message.includes('Too many')) {
+        toast.error('You have sent too many invites. Please try again later.');
+      } else {
+        toast.error(message);
+      }
     } finally {
       setIsInviting(false);
     }
