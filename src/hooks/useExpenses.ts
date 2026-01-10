@@ -161,7 +161,7 @@ export function useDeleteExpense() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (expenseId: string) => {
+    mutationFn: async ({ expenseId, groupId }: { expenseId: string; groupId?: string | null }) => {
       // Delete expense splits first (cascade should handle this but being explicit)
       const { error: splitsError } = await supabase
         .from('expense_splits')
@@ -177,11 +177,17 @@ export function useDeleteExpense() {
         .eq('id', expenseId);
 
       if (error) throw error;
+      
+      return { groupId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
+    onSuccess: async (data) => {
+      // Use Promise.all to wait for all invalidations to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['activities'] }),
+        queryClient.invalidateQueries({ queryKey: ['balances'] }),
+        data?.groupId ? queryClient.invalidateQueries({ queryKey: ['group', data.groupId] }) : Promise.resolve(),
+      ]);
       toast.success('Expense deleted successfully!');
     },
     onError: (error) => {

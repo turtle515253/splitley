@@ -33,7 +33,7 @@ const activityColors = {
 const Activity = () => {
   const { formatCurrency } = useCurrency();
   const { data: activities = [], isLoading } = useActivities();
-  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string; groupId?: string } | null>(null);
   
   // Group activities by relative date
   const groupedActivities = activities.reduce((acc, activity) => {
@@ -113,7 +113,8 @@ const Activity = () => {
                                   className="text-destructive focus:text-destructive"
                                   onClick={() => setExpenseToDelete({
                                     id: activity.expenseId!,
-                                    description: activity.description.replace(/^(You|Someone) added "/, '').replace(/"$/, '')
+                                    description: activity.description.replace(/^(You|Someone) added "/, '').replace(/"$/, ''),
+                                    groupId: activity.groupId
                                   })}
                                 >
                                   <Trash className="h-4 w-4 mr-2" />
@@ -144,6 +145,7 @@ const Activity = () => {
         onOpenChange={(open) => !open && setExpenseToDelete(null)}
         expenseId={expenseToDelete?.id ?? null}
         expenseDescription={expenseToDelete?.description ?? ''}
+        groupId={expenseToDelete?.groupId}
       />
     </AppLayout>
   );
