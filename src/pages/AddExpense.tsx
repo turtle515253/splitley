@@ -58,15 +58,13 @@ const AddExpense = () => {
 
   // Get the selected group's members
   const selectedGroupData = groups.find(g => g.id === selectedGroup);
-  const availableMembers = selectedGroupData?.members.filter(m => m.user_id !== user?.id) || [];
+  const allGroupMembers = selectedGroupData?.members || [];
   const allPossiblePayers = selectedGroupData?.members || [];
 
-  // Auto-select all members when group changes
+  // Auto-select all members (including current user) when group changes
   useEffect(() => {
     if (selectedGroup && selectedGroupData) {
-      const memberIds = selectedGroupData.members
-        .filter(m => m.user_id !== user?.id)
-        .map(m => m.user_id);
+      const memberIds = selectedGroupData.members.map(m => m.user_id);
       setSelectedMembers(memberIds);
     } else {
       setSelectedMembers([]);
@@ -103,32 +101,24 @@ const AddExpense = () => {
     }
     
     const totalAmount = parseFloat(amount);
-    const splitCount = selectedMembers.length + 1; // +1 for current user
+    const splitCount = selectedMembers.length;
     
     // Calculate splits
     const splits: { userId: string; amount: number }[] = [];
     
     if (splitType === 'equally') {
       const splitAmount = totalAmount / splitCount;
-      // Add current user's split
-      splits.push({ userId: user.id, amount: splitAmount });
-      // Add selected members' splits
+      // Add selected members' splits (including current user)
       selectedMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: splitAmount });
       });
     } else if (splitType === 'unequally') {
-      // Add current user's split
-      splits.push({ userId: user.id, amount: parseFloat(customSplits[user.id] || '0') });
-      // Add selected members' splits
+      // Add all selected members' splits
       selectedMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: parseFloat(customSplits[memberId] || '0') });
       });
     } else {
-      // Percentage
-      // Add current user's split
-      const userPercentage = parseFloat(customSplits[user.id] || '0');
-      splits.push({ userId: user.id, amount: (totalAmount * userPercentage) / 100 });
-      // Add selected members' splits
+      // Percentage - add all selected members' splits
       selectedMembers.forEach(memberId => {
         const percentage = parseFloat(customSplits[memberId] || '0');
         splits.push({ userId: memberId, amount: (totalAmount * percentage) / 100 });
@@ -156,7 +146,7 @@ const AddExpense = () => {
   const getSplitAmount = (memberId: string) => {
     if (!amount || parseFloat(amount) === 0) return '0.00';
     const totalAmount = parseFloat(amount);
-    const splitCount = selectedMembers.length + 1; // +1 for current user
+    const splitCount = selectedMembers.length;
     
     if (splitType === 'equally') {
       return (totalAmount / splitCount).toFixed(2);
@@ -419,7 +409,7 @@ const AddExpense = () => {
                 {splitType === 'equally' ? (
                   /* For equally split - show toggle chips */
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {availableMembers.map((member) => (
+                    {allGroupMembers.map((member) => (
                       <button
                         key={member.user_id}
                         onClick={() => toggleMember(member.user_id)}
@@ -436,7 +426,9 @@ const AddExpense = () => {
                             {member.display_name?.[0] || '?'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{member.display_name?.split(' ')[0] || 'Unknown'}</span>
+                        <span className="text-sm font-medium">
+                          {member.user_id === user?.id ? 'You' : member.display_name?.split(' ')[0] || 'Unknown'}
+                        </span>
                         {selectedMembers.includes(member.user_id) && (
                           <Check className="h-4 w-4" />
                         )}
@@ -446,54 +438,17 @@ const AddExpense = () => {
                 ) : (
                   /* For unequally/percentage - show list with inputs */
                   <div className="space-y-3 mt-3">
-                    {/* Current user's split */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 flex-1">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={currentUserProfile?.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs">{currentUserProfile?.display_name?.[0] || '?'}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">You</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {splitType === 'percentage' ? (
-                          <>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              value={customSplits[user?.id || ''] || ''}
-                              onChange={(e) => handleCustomSplitChange(user?.id || '', e.target.value)}
-                              className="w-16 h-9 text-right"
-                            />
-                            <span className="text-sm text-muted-foreground w-6">%</span>
-                            <span className="text-sm text-muted-foreground w-20 text-right">
-                              {currency.symbol}{amount ? ((parseFloat(amount) * parseFloat(customSplits[user?.id || ''] || '0')) / 100).toFixed(2) : '0.00'}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-sm text-muted-foreground">{currency.symbol}</span>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={customSplits[user?.id || ''] || ''}
-                              onChange={(e) => handleCustomSplitChange(user?.id || '', e.target.value)}
-                              className="w-24 h-9 text-right"
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* All available members */}
-                    {availableMembers.map((member) => (
+                    {/* All group members */}
+                    {allGroupMembers.map((member) => (
                       <div key={member.user_id} className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 flex-1">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={member.avatar_url || undefined} />
                             <AvatarFallback className="text-xs">{member.display_name?.[0] || '?'}</AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium">{member.display_name?.split(' ')[0] || 'Unknown'}</span>
+                          <span className="text-sm font-medium">
+                            {member.user_id === user?.id ? 'You' : member.display_name?.split(' ')[0] || 'Unknown'}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           {splitType === 'percentage' ? (
@@ -558,7 +513,7 @@ const AddExpense = () => {
                 {splitType === 'equally' && selectedMembers.length > 0 && amount && (
                   <p className="text-sm text-muted-foreground mt-4">
                     Split equally: <span className="font-semibold text-foreground">
-                      {currency.symbol}{(parseFloat(amount) / (selectedMembers.length + 1)).toFixed(2)}
+                      {currency.symbol}{(parseFloat(amount) / selectedMembers.length).toFixed(2)}
                     </span> each
                   </p>
                 )}
