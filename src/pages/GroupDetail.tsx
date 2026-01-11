@@ -14,6 +14,7 @@ import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
+import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
 import { getCategoryIcon } from '@/data/mockData';
 import {
   DropdownMenu,
@@ -198,6 +199,19 @@ const GroupDetail = () => {
               );
             })}
           </div>
+        </div>
+
+        {/* Balance Summary */}
+        <div className="px-5 mb-6">
+          <GroupBalanceSummary
+            members={group.members}
+            expenses={group.expenses.map((e) => ({
+              id: e.id,
+              amount: Number(e.amount),
+              paid_by: e.paid_by,
+              splits: e.splits,
+            }))}
+          />
         </div>
 
         {/* Expenses */}
