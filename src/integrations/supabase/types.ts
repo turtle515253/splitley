@@ -284,6 +284,33 @@ export type Database = {
         }
         Relationships: []
       }
+      settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          payer_id: string
+          receiver_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          payer_id: string
+          receiver_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          payer_id?: string
+          receiver_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       profiles_display: {
