@@ -8,7 +8,12 @@ export interface Activity {
   id: string;
   type: ActivityType;
   description: string;
+  expenseDescription?: string;
+  payerName: string;
   amount?: number;
+  userShare?: number; // positive = you get back, negative = you owe
+  category?: string;
+  groupName?: string;
   createdAt: Date;
   expenseId?: string;
   groupId?: string;
@@ -31,10 +36,16 @@ export function useActivities() {
           id,
           description,
           amount,
+          category,
           created_at,
           paid_by,
           group_id,
-          profiles:paid_by (display_name)
+          profiles:paid_by (display_name),
+          groups:group_id (name),
+          expense_splits!fk_expense_splits_expense_id (
+            user_id,
+            amount
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -45,11 +56,32 @@ export function useActivities() {
             ? 'You' 
             : (expense.profiles as any)?.display_name || 'Someone';
           
+          // Calculate user's share
+          const splits = expense.expense_splits || [];
+          const userSplit = splits.find((s: any) => s.user_id === user.id);
+          const isUserPayer = expense.paid_by === user.id;
+          
+          let userShare = 0;
+          if (isUserPayer) {
+            // User paid - they get back the sum of other people's splits
+            userShare = splits
+              .filter((s: any) => s.user_id !== user.id)
+              .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+          } else if (userSplit) {
+            // User didn't pay but has a split - they owe this amount
+            userShare = -Number(userSplit.amount);
+          }
+          
           activities.push({
             id: `expense-${expense.id}`,
             type: 'expense_added',
             description: `${payerName} added "${expense.description}"`,
+            expenseDescription: expense.description,
+            payerName,
             amount: Number(expense.amount),
+            userShare,
+            category: expense.category || 'general',
+            groupName: (expense.groups as any)?.name,
             createdAt: new Date(expense.created_at),
             expenseId: expense.id,
             groupId: expense.group_id || undefined,
@@ -85,11 +117,19 @@ export function useActivities() {
             ? 'you' 
             : receiver?.display_name || 'someone';
           
+          // If user is receiver, they received money (positive)
+          // If user is payer, they paid (negative from their perspective for display)
+          const userShare = settlement.receiver_id === user.id 
+            ? Number(settlement.amount) 
+            : -Number(settlement.amount);
+          
           activities.push({
             id: `settlement-${settlement.id}`,
             type: 'payment_made',
             description: `${payerName} paid ${receiverName}`,
+            payerName,
             amount: Number(settlement.amount),
+            userShare,
             createdAt: new Date(settlement.created_at),
           });
         }
@@ -109,6 +149,8 @@ export function useActivities() {
             id: `group-${group.id}`,
             type: 'group_created',
             description: `You created "${group.name}"`,
+            payerName: 'You',
+            groupName: group.name,
             createdAt: new Date(group.created_at),
           });
         }

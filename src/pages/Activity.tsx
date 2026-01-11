@@ -4,7 +4,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useActivities, formatRelativeTime, Activity as ActivityType } from '@/hooks/useActivities';
 import { useSettlements, useDeleteSettlement } from '@/hooks/useSettlements';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Plus, CreditCard, Users, Trash, Loader2, MoreVertical, Trash2 } from 'lucide-react';
+import { 
+  Plus, CreditCard, Users, Trash, Loader2, MoreVertical, Trash2,
+  Utensils, Coffee, Car, ShoppingCart, Home, Plane, Film, Gamepad2,
+  Heart, Gift, Zap, Wifi, Briefcase, GraduationCap, Stethoscope
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
@@ -27,12 +31,43 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const activityIcons = {
-  expense_added: Plus,
-  expense_deleted: Trash,
-  payment_made: CreditCard,
-  group_created: Users,
-  member_added: Users,
+// Category icons mapping
+const categoryIcons: Record<string, any> = {
+  food: Utensils,
+  drinks: Coffee,
+  transport: Car,
+  shopping: ShoppingCart,
+  groceries: ShoppingCart,
+  home: Home,
+  travel: Plane,
+  entertainment: Film,
+  games: Gamepad2,
+  health: Stethoscope,
+  gifts: Gift,
+  utilities: Zap,
+  internet: Wifi,
+  work: Briefcase,
+  education: GraduationCap,
+  general: Plus,
+};
+
+const categoryColors: Record<string, string> = {
+  food: 'bg-orange-500/20 text-orange-500',
+  drinks: 'bg-amber-500/20 text-amber-500',
+  transport: 'bg-blue-500/20 text-blue-500',
+  shopping: 'bg-pink-500/20 text-pink-500',
+  groceries: 'bg-green-500/20 text-green-500',
+  home: 'bg-purple-500/20 text-purple-500',
+  travel: 'bg-cyan-500/20 text-cyan-500',
+  entertainment: 'bg-red-500/20 text-red-500',
+  games: 'bg-indigo-500/20 text-indigo-500',
+  health: 'bg-rose-500/20 text-rose-500',
+  gifts: 'bg-fuchsia-500/20 text-fuchsia-500',
+  utilities: 'bg-yellow-500/20 text-yellow-500',
+  internet: 'bg-teal-500/20 text-teal-500',
+  work: 'bg-slate-500/20 text-slate-500',
+  education: 'bg-emerald-500/20 text-emerald-500',
+  general: 'bg-primary/20 text-primary',
 };
 
 const activityColors = {
@@ -116,36 +151,66 @@ const Activity = () => {
                     <Card>
                       <CardContent className="p-2">
                         {items.map((activity, index) => {
-                          const Icon = activityIcons[activity.type];
+                          // Get category icon for expenses
+                          const category = activity.category || 'general';
+                          const CategoryIcon = activity.type === 'expense_added' 
+                            ? (categoryIcons[category] || categoryIcons.general)
+                            : activity.type === 'payment_made'
+                            ? CreditCard
+                            : Users;
+                          const iconColor = activity.type === 'expense_added'
+                            ? (categoryColors[category] || categoryColors.general)
+                            : activityColors[activity.type];
+                          
                           return (
                             <div
                               key={activity.id}
                               className={cn(
-                                "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer",
+                                "flex items-start gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 cursor-pointer",
                                 index !== items.length - 1 && "border-b border-border/50"
                               )}
                             >
                               <div className={cn(
-                                "p-2 rounded-lg shrink-0",
-                                activityColors[activity.type]
+                                "p-2.5 rounded-lg shrink-0",
+                                iconColor
                               )}>
-                                <Icon className="h-4 w-4" />
+                                <CategoryIcon className="h-5 w-5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{activity.description}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {activity.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <p className="text-sm font-medium">
+                                  <span className="font-semibold">{activity.payerName}</span>
+                                  {activity.type === 'expense_added' && (
+                                    <>
+                                      {' added "'}
+                                      <span className="font-semibold">{activity.expenseDescription}</span>
+                                      {'"'}
+                                      {activity.groupName && (
+                                        <span className="text-muted-foreground"> in "{activity.groupName}"</span>
+                                      )}
+                                    </>
+                                  )}
+                                  {activity.type === 'payment_made' && (
+                                    <span className="text-muted-foreground"> recorded a payment</span>
+                                  )}
+                                  {activity.type === 'group_created' && (
+                                    <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                                  )}
+                                </p>
+                                {activity.userShare !== undefined && activity.userShare !== 0 && (
+                                  <p className={cn(
+                                    "text-sm font-semibold mt-0.5",
+                                    activity.userShare > 0 ? "text-positive" : "text-negative"
+                                  )}>
+                                    {activity.userShare > 0 
+                                      ? `You get back ${formatCurrency(activity.userShare)}`
+                                      : `You owe ${formatCurrency(Math.abs(activity.userShare))}`
+                                    }
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(activity.createdAt, 'd/MM/yyyy, h:mm a')}
                                 </p>
                               </div>
-                              {activity.amount && (
-                                <span className={cn(
-                                  "text-sm font-semibold shrink-0",
-                                  activity.type === 'payment_made' && "text-positive",
-                                  activity.type === 'expense_added' && "text-foreground"
-                                )}>
-                                  {activity.type === 'payment_made' ? '+' : ''}{formatCurrency(activity.amount)}
-                                </span>
-                              )}
                               {activity.type === 'expense_added' && activity.expenseId && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -158,7 +223,7 @@ const Activity = () => {
                                       className="text-destructive focus:text-destructive"
                                       onClick={() => setExpenseToDelete({
                                         id: activity.expenseId!,
-                                        description: activity.description.replace(/^(You|Someone) added "/, '').replace(/"$/, ''),
+                                        description: activity.expenseDescription || '',
                                         groupId: activity.groupId
                                       })}
                                     >
