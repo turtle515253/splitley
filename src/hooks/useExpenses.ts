@@ -125,9 +125,20 @@ export function useUpdateExpense() {
 
       if (deleteError) throw deleteError;
 
-      // Create new expense splits
+      // Create new expense splits with deduplication to prevent constraint violations
       if (splits.length > 0) {
-        const splitInserts = splits.map((split) => ({
+        // Deduplicate splits by userId - keep the first occurrence of each user
+        const seenUserIds = new Set<string>();
+        const uniqueSplits = splits.filter(split => {
+          if (seenUserIds.has(split.userId)) {
+            console.warn(`Duplicate split detected for user ${split.userId}, skipping`);
+            return false;
+          }
+          seenUserIds.add(split.userId);
+          return true;
+        });
+
+        const splitInserts = uniqueSplits.map((split) => ({
           expense_id: expenseId,
           user_id: split.userId,
           amount: split.amount,
