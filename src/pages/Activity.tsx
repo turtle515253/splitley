@@ -50,6 +50,20 @@ const Activity = () => {
   const deleteSettlement = useDeleteSettlement();
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string; groupId?: string } | null>(null);
   const [settlementToDelete, setSettlementToDelete] = useState<{ id: string; amount: number } | null>(null);
+
+  // Calculate payment summary
+  const paymentSummary = settlements.reduce(
+    (acc, settlement) => {
+      // Check if current user paid (payerName is "You")
+      if (settlement.payerName === 'You') {
+        acc.totalPaid += settlement.amount;
+      } else {
+        acc.totalReceived += settlement.amount;
+      }
+      return acc;
+    },
+    { totalPaid: 0, totalReceived: 0 }
+  );
   
   // Group activities by relative date
   const groupedActivities = activities.reduce((acc, activity) => {
@@ -175,53 +189,88 @@ const Activity = () => {
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : settlements.length > 0 ? (
-                <Card>
-                  <CardContent className="p-2">
-                    {settlements.map((settlement, index) => (
-                      <div
-                        key={settlement.id}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50",
-                          index !== settlements.length - 1 && "border-b border-border/50"
-                        )}
-                      >
-                        <div className="p-2 rounded-lg bg-positive/10 shrink-0">
-                          <CreditCard className="h-4 w-4 text-positive" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            {settlement.payerName} paid {settlement.receiverName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(settlement.createdAt, 'MMM d, yyyy • h:mm a')}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-positive shrink-0">
-                          {formatCurrency(settlement.amount)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => setSettlementToDelete({ id: settlement.id, amount: settlement.amount })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
               ) : (
-                <Card className="py-12">
-                  <CardContent className="text-center">
-                    <CreditCard className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-                    <p className="text-muted-foreground">No payments recorded yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Payments will appear here when you settle up with friends
-                    </p>
-                  </CardContent>
-                </Card>
+                <>
+                  {/* Payment Summary */}
+                  <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Payment Summary</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 rounded-xl bg-positive/10">
+                          <p className="text-xs text-muted-foreground mb-1">You Received</p>
+                          <p className="text-lg font-bold text-positive">
+                            +{formatCurrency(paymentSummary.totalReceived)}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-negative/10">
+                          <p className="text-xs text-muted-foreground mb-1">You Paid</p>
+                          <p className="text-lg font-bold text-negative">
+                            -{formatCurrency(paymentSummary.totalPaid)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border/50 text-center">
+                        <p className="text-xs text-muted-foreground">Net</p>
+                        <p className={cn(
+                          "text-xl font-bold",
+                          paymentSummary.totalReceived - paymentSummary.totalPaid >= 0 ? "text-positive" : "text-negative"
+                        )}>
+                          {paymentSummary.totalReceived - paymentSummary.totalPaid >= 0 ? '+' : ''}
+                          {formatCurrency(paymentSummary.totalReceived - paymentSummary.totalPaid)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {settlements.length > 0 ? (
+                    <Card>
+                      <CardContent className="p-2">
+                        {settlements.map((settlement, index) => (
+                          <div
+                            key={settlement.id}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50",
+                              index !== settlements.length - 1 && "border-b border-border/50"
+                            )}
+                          >
+                            <div className="p-2 rounded-lg bg-positive/10 shrink-0">
+                              <CreditCard className="h-4 w-4 text-positive" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">
+                                {settlement.payerName} paid {settlement.receiverName}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(settlement.createdAt, 'MMM d, yyyy • h:mm a')}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-positive shrink-0">
+                              {formatCurrency(settlement.amount)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setSettlementToDelete({ id: settlement.id, amount: settlement.amount })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="py-12">
+                      <CardContent className="text-center">
+                        <CreditCard className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-muted-foreground">No payments recorded yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Payments will appear here when you settle up with friends
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>
