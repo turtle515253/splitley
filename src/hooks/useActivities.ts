@@ -29,7 +29,7 @@ export function useActivities() {
 
       const activities: Activity[] = [];
 
-      // Fetch expenses the user created or is part of (via splits)
+      // Fetch expenses with related data using explicit foreign key hints
       const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
         .select(`
@@ -40,8 +40,7 @@ export function useActivities() {
           created_at,
           paid_by,
           group_id,
-          profiles:paid_by (display_name),
-          groups:group_id (name),
+          groups!fk_expenses_group_id (name),
           expense_splits!fk_expense_splits_expense_id (
             user_id,
             amount
@@ -52,11 +51,22 @@ export function useActivities() {
 
       console.log('[useActivities] Expenses fetched:', expenses?.length || 0, 'Error:', expensesError);
 
-      if (expenses) {
+      if (expenses && expenses.length > 0) {
+        // Collect all payer IDs to fetch their profiles
+        const payerIds = [...new Set(expenses.map(e => e.paid_by))];
+        
+        // Fetch payer profiles using profiles_display view (no email, less RLS restrictive)
+        const { data: payerProfiles } = await supabase
+          .from('profiles_display')
+          .select('id, display_name')
+          .in('id', payerIds);
+        
+        const payerMap = new Map(payerProfiles?.map(p => [p.id, p.display_name]) || []);
+
         for (const expense of expenses) {
           const payerName = expense.paid_by === user.id 
             ? 'You' 
-            : (expense.profiles as any)?.display_name || 'Someone';
+            : payerMap.get(expense.paid_by) || 'Someone';
           
           // Calculate user's share
           const splits = expense.expense_splits || [];
@@ -99,25 +109,30 @@ export function useActivities() {
           amount,
           created_at,
           payer_id,
-          receiver_id,
-          payer:payer_id (display_name),
-          receiver:receiver_id (display_name)
+          receiver_id
         `)
         .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (settlements) {
+      if (settlements && settlements.length > 0) {
+        // Collect all user IDs to fetch their profiles
+        const userIds = [...new Set(settlements.flatMap(s => [s.payer_id, s.receiver_id]))];
+        
+        const { data: userProfiles } = await supabase
+          .from('profiles_display')
+          .select('id, display_name')
+          .in('id', userIds);
+        
+        const profileMap = new Map(userProfiles?.map(p => [p.id, p.display_name]) || []);
+
         for (const settlement of settlements) {
-          const payer = settlement.payer as any;
-          const receiver = settlement.receiver as any;
-          
           const payerName = settlement.payer_id === user.id 
             ? 'You' 
-            : payer?.display_name || 'Someone';
+            : profileMap.get(settlement.payer_id) || 'Someone';
           const receiverName = settlement.receiver_id === user.id 
             ? 'you' 
-            : receiver?.display_name || 'someone';
+            : profileMap.get(settlement.receiver_id) || 'someone';
           
           // If user is receiver, they received money (positive)
           // If user is payer, they paid (negative from their perspective for display)
