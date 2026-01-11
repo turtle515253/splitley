@@ -316,7 +316,10 @@ export function useBalances() {
       // Apply debt simplification algorithm
       const simplifiedBalances = simplifyDebts(userNetBalances, user.id);
 
-      return simplifiedBalances.filter(b => Math.abs(b.amount) > 0.01);
+      // Round off all amounts and filter out zero balances
+      return simplifiedBalances
+        .map(b => ({ ...b, amount: Math.round(b.amount) }))
+        .filter(b => Math.abs(b.amount) > 0);
     },
     enabled: !!user,
   });
