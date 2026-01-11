@@ -93,7 +93,6 @@ interface UpdateExpenseParams {
 
 export function useUpdateExpense() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -105,14 +104,6 @@ export function useUpdateExpense() {
       splits,
       groupId,
     }: UpdateExpenseParams) => {
-      if (!user) throw new Error('Must be logged in');
-
-      // First, get existing splits to compare
-      const { data: existingSplits } = await supabase
-        .from('expense_splits')
-        .select('id, user_id, amount')
-        .eq('expense_id', expenseId);
-
       // Update the expense
       const { error: expenseError } = await supabase
         .from('expenses')
@@ -126,72 +117,27 @@ export function useUpdateExpense() {
 
       if (expenseError) throw expenseError;
 
-      // Build maps for comparison
-      const existingSplitMap = new Map(
-        (existingSplits || []).map(s => [s.user_id, { id: s.id, amount: s.amount }])
-      );
-      const newSplitMap = new Map(
-        splits.map(s => [s.userId, s.amount])
-      );
+      // Delete existing splits
+      const { error: deleteError } = await supabase
+        .from('expense_splits')
+        .delete()
+        .eq('expense_id', expenseId);
 
-      // Splits to update (same user, different amount)
-      const splitsToUpdate: { id: string; amount: number }[] = [];
-      // Splits to insert (new users)
-      const splitsToInsert: { expense_id: string; user_id: string; amount: number }[] = [];
-      // Split IDs to delete (removed users)
-      const splitIdsToDelete: string[] = [];
+      if (deleteError) throw deleteError;
 
-      // Check existing splits
-      for (const [userId, existing] of existingSplitMap) {
-        const newAmount = newSplitMap.get(userId);
-        if (newAmount === undefined) {
-          // User was removed from split
-          splitIdsToDelete.push(existing.id);
-        } else if (newAmount !== existing.amount) {
-          // Amount changed
-          splitsToUpdate.push({ id: existing.id, amount: newAmount });
-        }
-        // If amount is same, no action needed
-      }
+      // Create new expense splits
+      if (splits.length > 0) {
+        const splitInserts = splits.map((split) => ({
+          expense_id: expenseId,
+          user_id: split.userId,
+          amount: split.amount,
+        }));
 
-      // Check for new users
-      for (const [userId, amount] of newSplitMap) {
-        if (!existingSplitMap.has(userId)) {
-          splitsToInsert.push({
-            expense_id: expenseId,
-            user_id: userId,
-            amount,
-          });
-        }
-      }
-
-      // Delete removed splits
-      if (splitIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
+        const { error: splitsError } = await supabase
           .from('expense_splits')
-          .delete()
-          .in('id', splitIdsToDelete);
+          .insert(splitInserts);
 
-        if (deleteError) throw deleteError;
-      }
-
-      // Update existing splits with new amounts
-      for (const split of splitsToUpdate) {
-        const { error: updateError } = await supabase
-          .from('expense_splits')
-          .update({ amount: split.amount })
-          .eq('id', split.id);
-
-        if (updateError) throw updateError;
-      }
-
-      // Insert new splits
-      if (splitsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from('expense_splits')
-          .insert(splitsToInsert);
-
-        if (insertError) throw insertError;
+        if (splitsError) throw splitsError;
       }
 
       return { expenseId };
