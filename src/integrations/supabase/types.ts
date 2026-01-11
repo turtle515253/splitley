@@ -78,6 +78,7 @@ export type Database = {
           amount: number
           category: string | null
           created_at: string
+          created_by: string
           description: string
           group_id: string | null
           id: string
@@ -88,6 +89,7 @@ export type Database = {
           amount: number
           category?: string | null
           created_at?: string
+          created_by?: string
           description: string
           group_id?: string | null
           id?: string
@@ -98,6 +100,7 @@ export type Database = {
           amount?: number
           category?: string | null
           created_at?: string
+          created_by?: string
           description?: string
           group_id?: string | null
           id?: string

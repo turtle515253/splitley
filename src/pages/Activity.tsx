@@ -178,9 +178,9 @@ const Activity = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium">
-                                  <span className="font-semibold">{activity.payerName}</span>
                                   {activity.type === 'expense_added' && (
                                     <>
+                                      <span className="font-semibold">{activity.addedByName}</span>
                                       {' added "'}
                                       <span className="font-semibold">{activity.expenseDescription}</span>
                                       {'"'}
@@ -190,12 +190,23 @@ const Activity = () => {
                                     </>
                                   )}
                                   {activity.type === 'payment_made' && (
-                                    <span className="text-muted-foreground"> recorded a payment</span>
+                                    <>
+                                      <span className="font-semibold">{activity.payerName}</span>
+                                      <span className="text-muted-foreground"> recorded a payment</span>
+                                    </>
                                   )}
                                   {activity.type === 'group_created' && (
-                                    <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                                    <>
+                                      <span className="font-semibold">{activity.payerName}</span>
+                                      <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                                    </>
                                   )}
                                 </p>
+                                {activity.type === 'expense_added' && activity.payerName !== activity.addedByName && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Paid by {activity.payerName}
+                                  </p>
+                                )}
                                 {activity.userShare !== undefined && activity.userShare !== 0 && (
                                   <p className={cn(
                                     "text-sm font-semibold mt-0.5",
