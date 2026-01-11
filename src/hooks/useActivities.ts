@@ -10,6 +10,7 @@ export interface Activity {
   description: string;
   expenseDescription?: string;
   payerName: string;
+  addedByName?: string; // Who added/created the expense
   amount?: number;
   userShare?: number; // positive = you get back, negative = you owe
   category?: string;
@@ -39,6 +40,7 @@ export function useActivities() {
           category,
           created_at,
           paid_by,
+          created_by,
           group_id,
           groups!fk_expenses_group_id (name),
           expense_splits!fk_expense_splits_expense_id (
@@ -52,21 +54,25 @@ export function useActivities() {
       console.log('[useActivities] Expenses fetched:', expenses?.length || 0, 'Error:', expensesError);
 
       if (expenses && expenses.length > 0) {
-        // Collect all payer IDs to fetch their profiles
-        const payerIds = [...new Set(expenses.map(e => e.paid_by))];
+        // Collect all payer and creator IDs to fetch their profiles
+        const userIds = [...new Set(expenses.flatMap(e => [e.paid_by, e.created_by]))];
         
-        // Fetch payer profiles using profiles_display view (no email, less RLS restrictive)
-        const { data: payerProfiles } = await supabase
+        // Fetch profiles using profiles_display view (no email, less RLS restrictive)
+        const { data: userProfiles } = await supabase
           .from('profiles_display')
           .select('id, display_name')
-          .in('id', payerIds);
+          .in('id', userIds);
         
-        const payerMap = new Map(payerProfiles?.map(p => [p.id, p.display_name]) || []);
+        const profileMap = new Map(userProfiles?.map(p => [p.id, p.display_name]) || []);
 
         for (const expense of expenses) {
           const payerName = expense.paid_by === user.id 
             ? 'You' 
-            : payerMap.get(expense.paid_by) || 'Someone';
+            : profileMap.get(expense.paid_by) || 'Someone';
+          
+          const addedByName = expense.created_by === user.id
+            ? 'You'
+            : profileMap.get(expense.created_by) || 'Someone';
           
           // Calculate user's share
           const splits = expense.expense_splits || [];
@@ -87,9 +93,10 @@ export function useActivities() {
           activities.push({
             id: `expense-${expense.id}`,
             type: 'expense_added',
-            description: `${payerName} added "${expense.description}"`,
+            description: `${addedByName} added "${expense.description}"`,
             expenseDescription: expense.description,
             payerName,
+            addedByName,
             amount: Number(expense.amount),
             userShare,
             category: expense.category || 'general',
