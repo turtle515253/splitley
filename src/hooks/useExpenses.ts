@@ -108,18 +108,10 @@ export function useUpdateExpense() {
       if (!user) throw new Error('Must be logged in');
 
       // First, get existing splits to compare
-      const { data: existingSplits, error: fetchError } = await supabase
+      const { data: existingSplits } = await supabase
         .from('expense_splits')
         .select('id, user_id, amount')
         .eq('expense_id', expenseId);
-
-      if (fetchError) {
-        console.error('Error fetching existing splits:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('Existing splits:', existingSplits);
-      console.log('New splits:', splits);
 
       // Update the expense
       const { error: expenseError } = await supabase
@@ -134,16 +126,13 @@ export function useUpdateExpense() {
 
       if (expenseError) throw expenseError;
 
-      // Build maps for comparison - use a composite approach
-      const existingSplitMap = new Map<string, { id: string; amount: number }>();
-      for (const s of existingSplits || []) {
-        existingSplitMap.set(s.user_id, { id: s.id, amount: Number(s.amount) });
-      }
-
-      const newSplitMap = new Map<string, number>();
-      for (const s of splits) {
-        newSplitMap.set(s.userId, s.amount);
-      }
+      // Build maps for comparison
+      const existingSplitMap = new Map(
+        (existingSplits || []).map(s => [s.user_id, { id: s.id, amount: s.amount }])
+      );
+      const newSplitMap = new Map(
+        splits.map(s => [s.userId, s.amount])
+      );
 
       // Splits to update (same user, different amount)
       const splitsToUpdate: { id: string; amount: number }[] = [];
@@ -158,8 +147,8 @@ export function useUpdateExpense() {
         if (newAmount === undefined) {
           // User was removed from split
           splitIdsToDelete.push(existing.id);
-        } else if (Math.abs(newAmount - existing.amount) > 0.001) {
-          // Amount changed (use tolerance for floating point)
+        } else if (newAmount !== existing.amount) {
+          // Amount changed
           splitsToUpdate.push({ id: existing.id, amount: newAmount });
         }
         // If amount is same, no action needed
@@ -175,10 +164,6 @@ export function useUpdateExpense() {
           });
         }
       }
-
-      console.log('To delete:', splitIdsToDelete);
-      console.log('To update:', splitsToUpdate);
-      console.log('To insert:', splitsToInsert);
 
       // Delete removed splits
       if (splitIdsToDelete.length > 0) {
