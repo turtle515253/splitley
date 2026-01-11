@@ -15,6 +15,7 @@ import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
 import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
+import { GroupChartsDialog } from '@/components/groups/GroupChartsDialog';
 import { getCategoryIcon } from '@/data/mockData';
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ const GroupDetail = () => {
     splits?: { user_id: string; amount: number }[];
   } | null>(null);
   const [showBalanceSummary, setShowBalanceSummary] = useState(false);
+  const [showChartsDialog, setShowChartsDialog] = useState(false);
   const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
@@ -209,7 +211,7 @@ const GroupDetail = () => {
               variant="outline"
               size="sm"
               className="flex-shrink-0"
-              onClick={() => {}}
+              onClick={() => setShowChartsDialog(true)}
             >
               <BarChart3 className="h-4 w-4 mr-1.5" />
               Charts
@@ -343,6 +345,19 @@ const GroupDetail = () => {
         onOpenChange={(open) => !open && setExpenseToEdit(null)}
         expense={expenseToEdit}
         groupMembers={group.members}
+      />
+      
+      <GroupChartsDialog
+        open={showChartsDialog}
+        onOpenChange={setShowChartsDialog}
+        expenses={group.expenses.map(e => ({
+          id: e.id,
+          amount: Number(e.amount),
+          category: e.category,
+          paid_by: e.paid_by,
+          paidByProfile: e.paidByProfile,
+        }))}
+        members={group.members}
       />
     </AppLayout>
   );
