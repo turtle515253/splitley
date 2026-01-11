@@ -44,6 +44,8 @@ export type ExpenseCategory =
   | 'dining_out'
   | 'groceries'
   | 'liquor'
+  | 'tea_coffee'
+  | 'soft_drinks'
   | 'food_other'
   // Home
   | 'electronics'
