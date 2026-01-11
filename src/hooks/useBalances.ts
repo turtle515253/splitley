@@ -9,7 +9,7 @@ export interface FriendBalance {
     name: string;
     avatar?: string;
   };
-  amount: number; // positive = they owe you, negative = you owe them
+  amount: number; // positive = they owe you (net), negative = you owe them (net)
 }
 
 export function useBalances() {
@@ -20,10 +20,11 @@ export function useBalances() {
     queryFn: async (): Promise<FriendBalance[]> => {
       if (!user) return [];
 
+      // Map to store NET balance per user: positive = they owe you, negative = you owe them
       const balanceMap = new Map<string, { amount: number; name: string; avatar?: string }>();
 
       // Get expenses where the user paid (others owe them)
-      const { data: paidExpenses, error: paidError } = await supabase
+      const { data: paidExpenses } = await supabase
         .from('expenses')
         .select(`
           id,
@@ -36,15 +37,13 @@ export function useBalances() {
         `)
         .eq('paid_by', user.id);
 
-      
-
       if (paidExpenses) {
         for (const expense of paidExpenses) {
           for (const split of expense.expense_splits || []) {
             // Only count unsettled splits for other users (not the payer themselves)
             if (split.user_id !== user.id && split.is_settled !== true) {
               const current = balanceMap.get(split.user_id) || { amount: 0, name: '', avatar: undefined };
-              current.amount += Number(split.amount); // They owe you
+              current.amount += Number(split.amount); // They owe you (positive)
               balanceMap.set(split.user_id, current);
             }
           }
@@ -52,7 +51,7 @@ export function useBalances() {
       }
 
       // Get expense splits where user owes someone else
-      const { data: owedSplits, error: owedError } = await supabase
+      const { data: owedSplits } = await supabase
         .from('expense_splits')
         .select(`
           amount,
@@ -64,20 +63,16 @@ export function useBalances() {
         .eq('user_id', user.id)
         .or('is_settled.eq.false,is_settled.is.null');
 
-      
-
       if (owedSplits) {
         for (const split of owedSplits) {
           const expense = split.expenses as any;
           if (expense && expense.paid_by !== user.id) {
             const current = balanceMap.get(expense.paid_by) || { amount: 0, name: '', avatar: undefined };
-            current.amount -= Number(split.amount); // You owe them
+            current.amount -= Number(split.amount); // You owe them (negative)
             balanceMap.set(expense.paid_by, current);
           }
         }
       }
-
-      
 
       // Get profiles for all users in the balance map
       const userIds = Array.from(balanceMap.keys());
@@ -98,7 +93,7 @@ export function useBalances() {
         }
       }
 
-      // Convert map to array
+      // Convert map to array - amount is already NET (positive = they owe you, negative = you owe them)
       return Array.from(balanceMap.entries())
         .map(([oderId, data]) => ({
           oderId: oderId,
