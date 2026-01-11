@@ -117,13 +117,31 @@ export function useUpdateExpense() {
 
       if (expenseError) throw expenseError;
 
-      // Delete existing splits
-      const { error: deleteError } = await supabase
+      // Delete existing splits - use select to verify deletion happened
+      const { data: existingSplits } = await supabase
         .from('expense_splits')
-        .delete()
+        .select('id')
         .eq('expense_id', expenseId);
 
-      if (deleteError) throw deleteError;
+      if (existingSplits && existingSplits.length > 0) {
+        const splitIds = existingSplits.map(s => s.id);
+        const { error: deleteError } = await supabase
+          .from('expense_splits')
+          .delete()
+          .in('id', splitIds);
+
+        if (deleteError) throw deleteError;
+
+        // Verify deletion actually happened by checking again
+        const { data: remainingSplits } = await supabase
+          .from('expense_splits')
+          .select('id')
+          .eq('expense_id', expenseId);
+
+        if (remainingSplits && remainingSplits.length > 0) {
+          throw new Error('Failed to delete existing splits - you may not have permission');
+        }
+      }
 
       // Create new expense splits with deduplication to prevent constraint violations
       if (splits.length > 0) {
