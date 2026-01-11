@@ -222,7 +222,10 @@ export function EditExpenseDialog({
     }
 
     const totalAmount = parseFloat(amount);
-    const splitCount = selectedMembers.length + 1;
+    
+    // Filter out the payer from selected members to avoid duplicate splits
+    const nonPayerMembers = selectedMembers.filter(id => id !== paidBy);
+    const splitCount = nonPayerMembers.length + 1; // +1 for payer
 
     // Calculate splits
     const splits: { userId: string; amount: number }[] = [];
@@ -231,19 +234,19 @@ export function EditExpenseDialog({
       const splitAmount = totalAmount / splitCount;
       // Add payer's split
       splits.push({ userId: paidBy, amount: splitAmount });
-      // Add selected members' splits
-      selectedMembers.forEach(memberId => {
+      // Add selected members' splits (excluding payer)
+      nonPayerMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: splitAmount });
       });
     } else if (splitType === 'unequally') {
       splits.push({ userId: paidBy, amount: parseFloat(customSplits[paidBy] || '0') });
-      selectedMembers.forEach(memberId => {
+      nonPayerMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: parseFloat(customSplits[memberId] || '0') });
       });
     } else {
       const payerPercentage = parseFloat(customSplits[paidBy] || '0');
       splits.push({ userId: paidBy, amount: (totalAmount * payerPercentage) / 100 });
-      selectedMembers.forEach(memberId => {
+      nonPayerMembers.forEach(memberId => {
         const percentage = parseFloat(customSplits[memberId] || '0');
         splits.push({ userId: memberId, amount: (totalAmount * percentage) / 100 });
       });
