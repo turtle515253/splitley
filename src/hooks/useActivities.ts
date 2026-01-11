@@ -66,13 +66,15 @@ export function useActivities() {
         const profileMap = new Map(userProfiles?.map(p => [p.id, p.display_name]) || []);
 
         for (const expense of expenses) {
-          const payerName = expense.paid_by === user.id 
+          const expenseData = expense as any; // Type cast to access created_by
+          const payerName = expenseData.paid_by === user.id 
             ? 'You' 
-            : profileMap.get(expense.paid_by) || 'Someone';
+            : profileMap.get(expenseData.paid_by) || 'Someone';
           
-          const addedByName = expense.created_by === user.id
+          const createdById = expenseData.created_by || expenseData.paid_by;
+          const addedByName = createdById === user.id
             ? 'You'
-            : profileMap.get(expense.created_by) || 'Someone';
+            : profileMap.get(createdById) || 'Someone';
           
           // Calculate user's share
           const splits = expense.expense_splits || [];
