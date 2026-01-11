@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
-import { Mail, MessageSquare, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface Friend {
   id: string;
@@ -24,7 +23,6 @@ interface RemindDialogProps {
 
 export function RemindDialog({ open, onOpenChange, friend, balanceAmount }: RemindDialogProps) {
   const { formatCurrency } = useCurrency();
-  const [method, setMethod] = useState<'email' | 'sms' | 'app'>('app');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
@@ -36,19 +34,14 @@ export function RemindDialog({ open, onOpenChange, friend, balanceAmount }: Remi
       );
     }
   }, [open, friend.name, balanceAmount, formatCurrency]);
+
   const handleSend = async () => {
     setIsSending(true);
     
     // Simulate sending
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const methodLabels = {
-      email: 'Email',
-      sms: 'SMS',
-      app: 'In-app notification'
-    };
-    
-    toast.success(`Reminder sent to ${friend.name} via ${methodLabels[method]}!`);
+    toast.success(`Reminder sent to ${friend.name}!`);
     onOpenChange(false);
     setIsSending(false);
   };
@@ -76,31 +69,9 @@ export function RemindDialog({ open, onOpenChange, friend, balanceAmount }: Remi
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label>Send via</Label>
-            <RadioGroup value={method} onValueChange={(v) => setMethod(v as typeof method)}>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/30 cursor-pointer">
-                <RadioGroupItem value="app" id="app" />
-                <Label htmlFor="app" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Send className="h-4 w-4 text-muted-foreground" />
-                  In-app notification
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/30 cursor-pointer">
-                <RadioGroupItem value="email" id="email" />
-                <Label htmlFor="email" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  Email
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/30 cursor-pointer">
-                <RadioGroupItem value="sms" id="sms" />
-                <Label htmlFor="sms" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  SMS
-                </Label>
-              </div>
-            </RadioGroup>
+          <div className="p-3 rounded-lg bg-primary/10 flex items-center gap-2">
+            <Send className="h-4 w-4 text-primary" />
+            <span className="text-sm text-primary font-medium">In-app notification</span>
           </div>
 
           <div className="space-y-3">
