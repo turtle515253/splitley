@@ -2,16 +2,52 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActivities, formatRelativeTime } from '@/hooks/useActivities';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ChevronRight, Plus, CreditCard, Users, Trash } from 'lucide-react';
+import { 
+  ChevronRight, Plus, CreditCard, Users, Trash,
+  Utensils, Coffee, Car, ShoppingCart, Home, Plane, Film, Gamepad2,
+  Gift, Zap, Wifi, Briefcase, GraduationCap, Stethoscope
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
-const activityIcons = {
-  expense_added: Plus,
-  expense_deleted: Trash,
-  payment_made: CreditCard,
-  group_created: Users,
-  member_added: Users,
+// Category icons mapping
+const categoryIcons: Record<string, any> = {
+  food: Utensils,
+  drinks: Coffee,
+  transport: Car,
+  shopping: ShoppingCart,
+  groceries: ShoppingCart,
+  home: Home,
+  travel: Plane,
+  entertainment: Film,
+  games: Gamepad2,
+  health: Stethoscope,
+  gifts: Gift,
+  utilities: Zap,
+  internet: Wifi,
+  work: Briefcase,
+  education: GraduationCap,
+  general: Plus,
+};
+
+const categoryColors: Record<string, string> = {
+  food: 'bg-orange-500/20 text-orange-500',
+  drinks: 'bg-amber-500/20 text-amber-500',
+  transport: 'bg-blue-500/20 text-blue-500',
+  shopping: 'bg-pink-500/20 text-pink-500',
+  groceries: 'bg-green-500/20 text-green-500',
+  home: 'bg-purple-500/20 text-purple-500',
+  travel: 'bg-cyan-500/20 text-cyan-500',
+  entertainment: 'bg-red-500/20 text-red-500',
+  games: 'bg-indigo-500/20 text-indigo-500',
+  health: 'bg-rose-500/20 text-rose-500',
+  gifts: 'bg-fuchsia-500/20 text-fuchsia-500',
+  utilities: 'bg-yellow-500/20 text-yellow-500',
+  internet: 'bg-teal-500/20 text-teal-500',
+  work: 'bg-slate-500/20 text-slate-500',
+  education: 'bg-emerald-500/20 text-emerald-500',
+  general: 'bg-primary/20 text-primary',
 };
 
 const activityColors = {
@@ -55,7 +91,16 @@ export function RecentActivity() {
           </div>
         ) : recentActivities.length > 0 ? (
           recentActivities.map((activity, index) => {
-            const Icon = activityIcons[activity.type];
+            const category = activity.category || 'general';
+            const CategoryIcon = activity.type === 'expense_added' 
+              ? (categoryIcons[category] || categoryIcons.general)
+              : activity.type === 'payment_made'
+              ? CreditCard
+              : Users;
+            const iconColor = activity.type === 'expense_added'
+              ? (categoryColors[category] || categoryColors.general)
+              : activityColors[activity.type];
+            
             const isClickable = (activity.type === 'expense_added' && activity.groupId) || activity.type === 'group_created';
             
             const handleActivityClick = () => {
@@ -72,36 +117,54 @@ export function RecentActivity() {
                 key={activity.id}
                 onClick={isClickable ? handleActivityClick : undefined}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl transition-colors animate-slide-up",
+                  "flex items-start gap-3 p-3 rounded-xl transition-colors animate-slide-up",
                   isClickable && "hover:bg-accent/50 cursor-pointer"
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className={cn(
-                  "p-2 rounded-lg",
-                  activityColors[activity.type]
+                  "p-2 rounded-lg shrink-0",
+                  iconColor
                 )}>
-                  <Icon className="h-4 w-4" />
+                  <CategoryIcon className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{activity.description}</p>
+                  <p className="text-sm font-medium">
+                    <span className="font-semibold">{activity.payerName}</span>
+                    {activity.type === 'expense_added' && activity.expenseDescription && (
+                      <>
+                        {' added "'}
+                        <span className="font-semibold">{activity.expenseDescription}</span>
+                        {'"'}
+                      </>
+                    )}
+                    {activity.type === 'group_created' && activity.groupName && (
+                      <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                    )}
+                  </p>
+                  {activity.userShare !== undefined && activity.userShare !== 0 && (
+                    <p className={cn(
+                      "text-xs font-semibold",
+                      activity.userShare > 0 ? "text-positive" : "text-negative"
+                    )}>
+                      {activity.userShare > 0 
+                        ? `You get back ${formatCurrency(activity.userShare)}`
+                        : `You owe ${formatCurrency(Math.abs(activity.userShare))}`
+                      }
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {formatRelativeTime(activity.createdAt)}
                   </p>
                 </div>
-                {activity.amount && (
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(activity.amount)}
-                  </span>
-                )}
                 {isClickable && (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                 )}
               </div>
             );
           })
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No activity yet</p>
+          <p className="text-sm text-muted-foreground text-center py-4">No activity yet. Add an expense to get started!</p>
         )}
       </CardContent>
     </Card>

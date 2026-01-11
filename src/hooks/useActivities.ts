@@ -30,7 +30,7 @@ export function useActivities() {
       const activities: Activity[] = [];
 
       // Fetch expenses the user created or is part of (via splits)
-      const { data: expenses } = await supabase
+      const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
         .select(`
           id,
@@ -49,6 +49,8 @@ export function useActivities() {
         `)
         .order('created_at', { ascending: false })
         .limit(50);
+
+      console.log('[useActivities] Expenses fetched:', expenses?.length || 0, 'Error:', expensesError);
 
       if (expenses) {
         for (const expense of expenses) {
