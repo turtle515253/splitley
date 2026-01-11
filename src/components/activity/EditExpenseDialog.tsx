@@ -175,15 +175,25 @@ export function EditExpenseDialog({
     }
   }, [expense, open, groupMembers]);
 
-  const availableMembers = groupMembers;
+  // Exclude payer from selectable members in UI to prevent duplicate selection
+  const selectableMembers = groupMembers.filter(m => m.user_id !== paidBy);
   const paidByMember = groupMembers.find(m => m.user_id === paidBy);
 
   const toggleMember = (userId: string) => {
+    // Don't allow selecting the payer
+    if (userId === paidBy) return;
     setSelectedMembers(prev =>
       prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
+  };
+
+  // Auto-remove payer from selectedMembers when payer changes
+  const handlePaidByChange = (newPaidBy: string) => {
+    setPaidBy(newPaidBy);
+    // Remove the new payer from selected members if they were selected
+    setSelectedMembers(prev => prev.filter(id => id !== newPaidBy));
   };
 
   const handleSplitTypeChange = (type: 'equally' | 'unequally' | 'percentage') => {
@@ -223,9 +233,9 @@ export function EditExpenseDialog({
 
     const totalAmount = parseFloat(amount);
     
-    // Filter out the payer from selected members to avoid duplicate splits
-    const nonPayerMembers = selectedMembers.filter(id => id !== paidBy);
-    const splitCount = nonPayerMembers.length + 1; // +1 for payer
+    // Filter out the payer and deduplicate using Set to avoid duplicate splits
+    const uniqueNonPayerMembers = [...new Set(selectedMembers.filter(id => id !== paidBy))];
+    const splitCount = uniqueNonPayerMembers.length + 1; // +1 for payer
 
     // Calculate splits
     const splits: { userId: string; amount: number }[] = [];
@@ -234,22 +244,29 @@ export function EditExpenseDialog({
       const splitAmount = totalAmount / splitCount;
       // Add payer's split
       splits.push({ userId: paidBy, amount: splitAmount });
-      // Add selected members' splits (excluding payer)
-      nonPayerMembers.forEach(memberId => {
+      // Add selected members' splits (deduplicated, excluding payer)
+      uniqueNonPayerMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: splitAmount });
       });
     } else if (splitType === 'unequally') {
       splits.push({ userId: paidBy, amount: parseFloat(customSplits[paidBy] || '0') });
-      nonPayerMembers.forEach(memberId => {
+      uniqueNonPayerMembers.forEach(memberId => {
         splits.push({ userId: memberId, amount: parseFloat(customSplits[memberId] || '0') });
       });
     } else {
       const payerPercentage = parseFloat(customSplits[paidBy] || '0');
       splits.push({ userId: paidBy, amount: (totalAmount * payerPercentage) / 100 });
-      nonPayerMembers.forEach(memberId => {
+      uniqueNonPayerMembers.forEach(memberId => {
         const percentage = parseFloat(customSplits[memberId] || '0');
         splits.push({ userId: memberId, amount: (totalAmount * percentage) / 100 });
       });
+    }
+
+    // Final validation: ensure no duplicate user_ids in splits
+    const userIds = splits.map(s => s.userId);
+    if (new Set(userIds).size !== userIds.length) {
+      toast.error('Duplicate members detected. Please try again.');
+      return;
     }
 
     try {
@@ -390,7 +407,7 @@ export function EditExpenseDialog({
                   <button
                     key={member.user_id}
                     onClick={() => {
-                      setPaidBy(member.user_id);
+                      handlePaidByChange(member.user_id);
                       setShowPaidByPicker(false);
                     }}
                     className={cn(
@@ -441,7 +458,23 @@ export function EditExpenseDialog({
 
             {splitType === 'equally' ? (
               <div className="flex flex-wrap gap-2 mt-3">
-                {availableMembers.map((member) => (
+                {/* Show payer as always included (non-clickable) */}
+                {paidByMember && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-primary/20 text-primary border border-primary/30">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={paidByMember.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {paidByMember.display_name?.[0] || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">
+                      {paidBy === user?.id ? 'You' : paidByMember.display_name?.split(' ')[0] || 'Unknown'}
+                    </span>
+                    <Check className="h-4 w-4" />
+                  </div>
+                )}
+                {/* Show other members as selectable (excluding payer) */}
+                {selectableMembers.map((member) => (
                   <button
                     key={member.user_id}
                     onClick={() => toggleMember(member.user_id)}
@@ -495,7 +528,8 @@ export function EditExpenseDialog({
                   </div>
                 </div>
 
-                {availableMembers.map((member) => (
+                {/* Show other members (excluding payer) */}
+                {selectableMembers.map((member) => (
                   <div key={member.user_id} className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={member.avatar_url || undefined} />
