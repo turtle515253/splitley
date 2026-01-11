@@ -66,64 +66,51 @@ export function FriendBalanceList() {
                 key={balance.user.id}
                 onClick={() => navigate(`/friend/${balance.user.id}`)}
                 className={cn(
-                  "flex items-center justify-between p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up",
+                  "flex items-center justify-between p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up gap-3",
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={balance.user.avatar} />
                     <AvatarFallback>
                       {balance.user.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{balance.user.name}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{balance.user.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {balance.amount > 0 ? 'owes you' : 'you owe'}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className={cn(
-                    "font-semibold",
+                    "font-semibold text-sm whitespace-nowrap",
                     balance.amount > 0 ? "text-positive" : "text-negative"
                   )}>
                     {balance.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(balance.amount))}
                   </span>
-                  {balance.amount > 0 ? (
-                    // Friend owes user - show Remind and Settle buttons
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => handleRemindClick(e, balance)}
-                        className="text-xs h-7 w-7 p-0"
-                        title="Send reminder"
-                      >
-                        <Bell className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => handleSettleClick(e, balance)}
-                        className="text-xs h-7 px-2"
-                      >
-                        Settle
-                      </Button>
-                    </div>
-                  ) : (
-                    // User owes friend - only show Settle button
+                  {balance.amount > 0 && (
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => handleSettleClick(e, balance)}
-                      className="text-xs h-7 px-2"
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => handleRemindClick(e, balance)}
+                      className="h-8 w-8"
+                      title="Send reminder"
                     >
-                      Settle
+                      <Bell className="h-4 w-4" />
                     </Button>
                   )}
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => handleSettleClick(e, balance)}
+                    className="text-xs h-8 px-3"
+                  >
+                    Settle
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                 </div>
               </div>
             ))
