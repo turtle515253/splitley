@@ -20,11 +20,9 @@ interface UserNetBalance {
 }
 
 /**
- * Splitwise-style debt simplification algorithm
- * 1. Calculate net balance for each user (total paid - total share)
- * 2. Creditors (positive balance) should receive money
- * 3. Debtors (negative balance) should pay money
- * 4. Match creditors with debtors to minimize transactions
+ * Splitwise-style debt simplification algorithm with full settlement priority
+ * Goal: Each person pays/receives from as few people as possible
+ * Strategy: Try to match each debtor with a single creditor when possible
  */
 function simplifyDebts(
   userNetBalances: Map<string, UserNetBalance>,
@@ -54,39 +52,78 @@ function simplifyDebts(
     }
   });
   
-  // Sort by amount (greedy algorithm - larger amounts first)
+  // Sort creditors by amount descending (largest first)
+  // Sort debtors by amount descending (largest first)
   creditors.sort((a, b) => b.amount - a.amount);
   debtors.sort((a, b) => b.amount - a.amount);
   
-  // Match debtors to creditors
   const transactions: { from: typeof debtors[0]; to: typeof creditors[0]; amount: number }[] = [];
   
-  let i = 0; // creditor index
-  let j = 0; // debtor index
-  
-  while (i < creditors.length && j < debtors.length) {
-    const creditor = creditors[i];
-    const debtor = debtors[j];
+  // Phase 1: Try to find exact matches (debtor amount = creditor amount)
+  for (let d = 0; d < debtors.length; d++) {
+    if (debtors[d].amount < 0.01) continue;
     
-    const transferAmount = Math.min(creditor.amount, debtor.amount);
-    
-    if (transferAmount > 0.01) {
-      transactions.push({
-        from: debtor,
-        to: creditor,
-        amount: transferAmount
-      });
+    for (let c = 0; c < creditors.length; c++) {
+      if (creditors[c].amount < 0.01) continue;
+      
+      // Check for exact or near-exact match
+      if (Math.abs(debtors[d].amount - creditors[c].amount) < 0.01) {
+        transactions.push({
+          from: { ...debtors[d] },
+          to: { ...creditors[c] },
+          amount: debtors[d].amount
+        });
+        creditors[c].amount = 0;
+        debtors[d].amount = 0;
+        break;
+      }
     }
+  }
+  
+  // Phase 2: Match remaining debtors to creditors
+  // Strategy: Each debtor pays to the largest available creditor(s)
+  // This consolidates payments - debtor pays fewer people
+  for (const debtor of debtors) {
+    if (debtor.amount < 0.01) continue;
     
-    creditor.amount -= transferAmount;
-    debtor.amount -= transferAmount;
+    // Find creditors who can absorb this debtor's full amount
+    // Prefer single creditor over multiple
+    let bestSingleCreditor = creditors.find(c => c.amount >= debtor.amount - 0.01 && c.amount > 0);
     
-    if (creditor.amount < 0.01) i++;
-    if (debtor.amount < 0.01) j++;
+    if (bestSingleCreditor) {
+      // Debtor pays full amount to single creditor
+      transactions.push({
+        from: { ...debtor },
+        to: { ...bestSingleCreditor },
+        amount: debtor.amount
+      });
+      bestSingleCreditor.amount -= debtor.amount;
+      debtor.amount = 0;
+    } else {
+      // Must split across multiple creditors
+      // Pay to largest creditors first
+      for (const creditor of creditors) {
+        if (debtor.amount < 0.01) break;
+        if (creditor.amount < 0.01) continue;
+        
+        const transferAmount = Math.min(creditor.amount, debtor.amount);
+        
+        transactions.push({
+          from: { ...debtor },
+          to: { ...creditor },
+          amount: transferAmount
+        });
+        
+        creditor.amount -= transferAmount;
+        debtor.amount -= transferAmount;
+      }
+    }
   }
   
   // Filter transactions involving the current user
   for (const tx of transactions) {
+    if (tx.amount < 0.01) continue;
+    
     if (tx.from.id === currentUserId) {
       // Current user owes tx.to
       results.push({
