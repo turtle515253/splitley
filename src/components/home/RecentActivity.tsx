@@ -130,16 +130,22 @@ export function RecentActivity() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">
-                    <span className="font-semibold">{activity.payerName}</span>
                     {activity.type === 'expense_added' && activity.expenseDescription && (
                       <>
+                        <span className="font-semibold">{activity.addedByName || activity.payerName}</span>
                         {' added "'}
                         <span className="font-semibold">{activity.expenseDescription}</span>
                         {'"'}
                       </>
                     )}
+                    {activity.type === 'payment_made' && (
+                      <span className="font-semibold">{activity.payerName}</span>
+                    )}
                     {activity.type === 'group_created' && activity.groupName && (
-                      <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                      <>
+                        <span className="font-semibold">{activity.payerName}</span>
+                        <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                      </>
                     )}
                   </p>
                   {activity.userShare !== undefined && activity.userShare !== 0 && (
