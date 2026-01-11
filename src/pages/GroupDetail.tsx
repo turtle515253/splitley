@@ -14,6 +14,7 @@ import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
+import { getCategoryIcon } from '@/data/mockData';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -210,10 +211,7 @@ const GroupDetail = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-lg">
-                          {expense.category === 'food' ? '🍽️' : 
-                           expense.category === 'transport' ? '🚗' : 
-                           expense.category === 'entertainment' ? '🎬' : 
-                           expense.category === 'shopping' ? '🛍️' : '📝'}
+                          {getCategoryIcon(expense.category || 'general')}
                         </div>
                         <div>
                           <p className="font-medium">{expense.description}</p>
