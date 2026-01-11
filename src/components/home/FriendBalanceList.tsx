@@ -66,31 +66,33 @@ export function FriendBalanceList() {
                 key={balance.user.id}
                 onClick={() => navigate(`/friend/${balance.user.id}`)}
                 className={cn(
-                  "flex items-center justify-between p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up gap-3",
+                  "flex items-center p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up",
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={balance.user.avatar} />
-                    <AvatarFallback>
-                      {balance.user.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{balance.user.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={balance.user.avatar} />
+                  <AvatarFallback>
+                    {balance.user.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="font-medium text-sm">{balance.user.name}</p>
+                  <div className="flex items-center gap-1 text-xs">
+                    <span className="text-muted-foreground">
                       {balance.amount > 0 ? 'owes you' : 'you owe'}
-                    </p>
+                    </span>
+                    <span className={cn(
+                      "font-semibold",
+                      balance.amount > 0 ? "text-positive" : "text-negative"
+                    )}>
+                      {formatCurrency(Math.abs(balance.amount))}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={cn(
-                    "font-semibold text-sm whitespace-nowrap",
-                    balance.amount > 0 ? "text-positive" : "text-negative"
-                  )}>
-                    {balance.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(balance.amount))}
-                  </span>
+
+                <div className="flex items-center gap-1 shrink-0 ml-2">
                   {balance.amount > 0 && (
                     <Button
                       size="icon"
@@ -110,7 +112,7 @@ export function FriendBalanceList() {
                   >
                     Settle
                   </Button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             ))
