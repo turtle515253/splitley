@@ -236,46 +236,64 @@ export function useSettleUp() {
     mutationFn: async ({ friendId, amount }: { friendId: string; amount: number }) => {
       if (!user) throw new Error('Must be logged in');
 
+      console.log('[SettleUp] Starting settlement:', { friendId, amount, userId: user.id });
+
       // Get all unsettled expense splits between the current user and the friend
       // First, get splits where user owes friend (friend paid)
-      const { data: owedToFriend } = await supabase
+      const { data: owedToFriend, error: owedToFriendError } = await supabase
         .from('expense_splits')
         .select(`
           id,
           amount,
-          expenses!inner (
+          expense_id,
+          expenses!fk_expense_splits_expense_id (
             paid_by
           )
         `)
         .eq('user_id', user.id)
-        .eq('is_settled', false)
-        .eq('expenses.paid_by', friendId);
+        .eq('is_settled', false);
+
+      // Filter to only include splits where friend paid
+      const filteredOwedToFriend = (owedToFriend || []).filter(
+        (split: any) => split.expenses?.paid_by === friendId
+      );
+
+      console.log('[SettleUp] Splits user owes friend:', filteredOwedToFriend, owedToFriendError);
 
       // Get splits where friend owes user (user paid) - current user CAN settle these now
-      const { data: owedByFriend } = await supabase
+      const { data: owedByFriend, error: owedByFriendError } = await supabase
         .from('expense_splits')
         .select(`
           id,
           amount,
-          expenses!inner (
+          expense_id,
+          expenses!fk_expense_splits_expense_id (
             paid_by
           )
         `)
         .eq('user_id', friendId)
-        .eq('is_settled', false)
-        .eq('expenses.paid_by', user.id);
+        .eq('is_settled', false);
+
+      // Filter to only include splits where user paid
+      const filteredOwedByFriend = (owedByFriend || []).filter(
+        (split: any) => split.expenses?.paid_by === user.id
+      );
+
+      console.log('[SettleUp] Splits friend owes user:', filteredOwedByFriend, owedByFriendError);
 
       let remainingAmount = amount;
       const splitsToSettle: string[] = [];
 
       // Calculate net balance to determine which splits to settle
-      const userOwesFriend = (owedToFriend || []).reduce((sum, s) => sum + Number(s.amount), 0);
-      const friendOwesUser = (owedByFriend || []).reduce((sum, s) => sum + Number(s.amount), 0);
+      const userOwesFriend = filteredOwedToFriend.reduce((sum, s) => sum + Number(s.amount), 0);
+      const friendOwesUser = filteredOwedByFriend.reduce((sum, s) => sum + Number(s.amount), 0);
       const netBalance = friendOwesUser - userOwesFriend; // positive = friend owes user
+
+      console.log('[SettleUp] Net balance calculation:', { userOwesFriend, friendOwesUser, netBalance });
 
       if (netBalance < 0) {
         // User owes friend - settle user's splits first
-        for (const split of (owedToFriend || []).sort((a, b) => Number(a.amount) - Number(b.amount))) {
+        for (const split of filteredOwedToFriend.sort((a, b) => Number(a.amount) - Number(b.amount))) {
           if (remainingAmount >= Number(split.amount)) {
             splitsToSettle.push(split.id);
             remainingAmount -= Number(split.amount);
@@ -287,7 +305,7 @@ export function useSettleUp() {
         }
       } else {
         // Friend owes user - settle their splits (user is the payer, so RLS allows it now)
-        for (const split of (owedByFriend || []).sort((a, b) => Number(a.amount) - Number(b.amount))) {
+        for (const split of filteredOwedByFriend.sort((a, b) => Number(a.amount) - Number(b.amount))) {
           if (remainingAmount >= Number(split.amount)) {
             splitsToSettle.push(split.id);
             remainingAmount -= Number(split.amount);
@@ -299,17 +317,24 @@ export function useSettleUp() {
         }
       }
 
+      console.log('[SettleUp] Splits to settle:', splitsToSettle);
+
       // Settle the splits
       if (splitsToSettle.length > 0) {
-        const { error } = await supabase
+        const { data: updateResult, error } = await supabase
           .from('expense_splits')
           .update({ 
             is_settled: true, 
             settled_at: new Date().toISOString() 
           })
-          .in('id', splitsToSettle);
+          .in('id', splitsToSettle)
+          .select();
+
+        console.log('[SettleUp] Update result:', updateResult, error);
 
         if (error) throw error;
+      } else {
+        console.log('[SettleUp] No splits found to settle!');
       }
 
       return { settledCount: splitsToSettle.length, amount };

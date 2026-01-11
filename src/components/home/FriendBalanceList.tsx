@@ -6,21 +6,29 @@ import { Button } from '@/components/ui/button';
 import { useBalances, FriendBalance } from '@/hooks/useBalances';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SettleUpDialog } from '@/components/friends/SettleUpDialog';
+import { RemindDialog } from '@/components/friends/RemindDialog';
 
 export function FriendBalanceList() {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { data: balances = [], isLoading } = useBalances();
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<FriendBalance | null>(null);
 
   const handleSettleClick = (e: React.MouseEvent, balance: FriendBalance) => {
     e.stopPropagation();
     setSelectedBalance(balance);
     setSettleDialogOpen(true);
+  };
+
+  const handleRemindClick = (e: React.MouseEvent, balance: FriendBalance) => {
+    e.stopPropagation();
+    setSelectedBalance(balance);
+    setRemindDialogOpen(true);
   };
 
   return (
@@ -83,14 +91,38 @@ export function FriendBalanceList() {
                   )}>
                     {balance.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(balance.amount))}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => handleSettleClick(e, balance)}
-                    className="text-xs h-7 px-2"
-                  >
-                    Settle
-                  </Button>
+                  {balance.amount > 0 ? (
+                    // Friend owes user - show Remind and Settle buttons
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => handleRemindClick(e, balance)}
+                        className="text-xs h-7 w-7 p-0"
+                        title="Send reminder"
+                      >
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleSettleClick(e, balance)}
+                        className="text-xs h-7 px-2"
+                      >
+                        Settle
+                      </Button>
+                    </div>
+                  ) : (
+                    // User owes friend - only show Settle button
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => handleSettleClick(e, balance)}
+                      className="text-xs h-7 px-2"
+                    >
+                      Settle
+                    </Button>
+                  )}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
@@ -100,16 +132,28 @@ export function FriendBalanceList() {
       </Card>
 
       {selectedBalance && (
-        <SettleUpDialog
-          open={settleDialogOpen}
-          onOpenChange={setSettleDialogOpen}
-          friend={{
-            id: selectedBalance.user.id,
-            name: selectedBalance.user.name,
-            avatar: selectedBalance.user.avatar,
-          }}
-          balanceAmount={selectedBalance.amount}
-        />
+        <>
+          <SettleUpDialog
+            open={settleDialogOpen}
+            onOpenChange={setSettleDialogOpen}
+            friend={{
+              id: selectedBalance.user.id,
+              name: selectedBalance.user.name,
+              avatar: selectedBalance.user.avatar,
+            }}
+            balanceAmount={selectedBalance.amount}
+          />
+          <RemindDialog
+            open={remindDialogOpen}
+            onOpenChange={setRemindDialogOpen}
+            friend={{
+              id: selectedBalance.user.id,
+              name: selectedBalance.user.name,
+              avatar: selectedBalance.user.avatar,
+            }}
+            balanceAmount={Math.abs(selectedBalance.amount)}
+          />
+        </>
       )}
     </>
   );
