@@ -51,7 +51,7 @@ export const expenses: Expense[] = [
     paidBy: users[1],
     splitWith: [users[0], users[1], users[2], users[3]],
     groupId: 'g1',
-    category: 'food',
+    category: 'dining_out',
     createdAt: new Date('2024-12-20'),
     splitType: 'equal',
   },
@@ -62,7 +62,7 @@ export const expenses: Expense[] = [
     paidBy: users[0],
     splitWith: [users[0], users[1], users[2]],
     groupId: 'g1',
-    category: 'transport',
+    category: 'taxi',
     createdAt: new Date('2024-12-19'),
     splitType: 'equal',
   },
@@ -73,7 +73,7 @@ export const expenses: Expense[] = [
     paidBy: users[4],
     splitWith: [users[0], users[4], users[5]],
     groupId: 'g2',
-    category: 'utilities',
+    category: 'electricity',
     createdAt: new Date('2024-12-18'),
     splitType: 'equal',
   },
@@ -84,7 +84,7 @@ export const expenses: Expense[] = [
     paidBy: users[0],
     splitWith: [users[0], users[1], users[2]],
     groupId: 'g3',
-    category: 'food',
+    category: 'dining_out',
     createdAt: new Date('2024-12-17'),
     splitType: 'equal',
   },
@@ -94,7 +94,7 @@ export const expenses: Expense[] = [
     amount: 24.50,
     paidBy: users[2],
     splitWith: [users[0], users[2]],
-    category: 'food',
+    category: 'dining_out',
     createdAt: new Date('2024-12-16'),
     splitType: 'equal',
   },
@@ -156,16 +156,66 @@ export const balances: Balance[] = [
 
 export const getCategoryIcon = (category: string) => {
   const icons: Record<string, string> = {
+    // Entertainment
+    games: '🎮',
+    movies: '🎬',
+    music: '🎵',
+    entertainment_other: '🎭',
+    sports: '⚽',
+    // Food and drink
+    dining_out: '🍽️',
+    groceries: '🛒',
+    liquor: '🍷',
+    food_other: '🍔',
+    // Home
+    electronics: '⚡',
+    furniture: '🪑',
+    household_supplies: '🧴',
+    maintenance: '🔧',
+    mortgage: '🏡',
+    home_other: '🏠',
+    pets: '🐾',
+    rent: '🏠',
+    services: '🛎️',
+    // Life
+    childcare: '👶',
+    clothing: '👕',
+    education: '🎓',
+    gifts: '🎁',
+    insurance: '📋',
+    medical: '🩺',
+    life_other: '📦',
+    taxes: '🧾',
+    // Transportation
+    bicycle: '🚲',
+    bus_train: '🚂',
+    car: '🚗',
+    gas_fuel: '⛽',
+    hotel: '🏨',
+    transport_other: '🚐',
+    parking: '🅿️',
+    plane: '✈️',
+    taxi: '🚕',
+    // Utilities
+    cleaning: '🧹',
+    electricity: '💡',
+    heat_gas: '🔥',
+    utilities_other: '🔌',
+    trash: '🗑️',
+    tv_phone_internet: '📡',
+    water: '💧',
+    // Uncategorized
+    general: '📝',
+    // Legacy categories (for backwards compatibility)
     food: '🍔',
     transport: '🚗',
     entertainment: '🎬',
     shopping: '🛍️',
     utilities: '💡',
-    rent: '🏠',
     travel: '✈️',
     other: '📦',
   };
-  return icons[category] || '📦';
+  return icons[category] || '📝';
 };
 
 export const formatCurrency = (amount: number): string => {
