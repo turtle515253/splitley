@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface Settlement {
   id: string;
@@ -69,5 +70,33 @@ export function useSettlements(friendId?: string) {
       }));
     },
     enabled: !!user,
+  });
+}
+
+export function useDeleteSettlement() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settlementId: string) => {
+      const { error } = await supabase
+        .from('settlements')
+        .delete()
+        .eq('id', settlementId);
+
+      if (error) throw error;
+      return settlementId;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['settlements'] }),
+        queryClient.invalidateQueries({ queryKey: ['balances'] }),
+        queryClient.invalidateQueries({ queryKey: ['activities'] }),
+      ]);
+      toast.success('Settlement deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting settlement:', error);
+      toast.error('Failed to delete settlement');
+    },
   });
 }
