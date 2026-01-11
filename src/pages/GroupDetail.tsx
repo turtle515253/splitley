@@ -224,7 +224,7 @@ const GroupDetail = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
-                        {/* Allow group creator or expense payer to manage expenses */}
+                        {/* Only expense payer can edit, but payer or group creator can delete */}
                         {(expense.paid_by === user?.id || isCreator) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -233,20 +233,23 @@ const GroupDetail = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => setExpenseToEdit({
-                                  id: expense.id,
-                                  description: expense.description,
-                                  amount: Number(expense.amount),
-                                  category: expense.category,
-                                  paid_by: expense.paid_by,
-                                  group_id: groupId!,
-                                  splits: expense.splits,
-                                })}
-                              >
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
+                              {/* Only the payer can edit an expense */}
+                              {expense.paid_by === user?.id && (
+                                <DropdownMenuItem
+                                  onClick={() => setExpenseToEdit({
+                                    id: expense.id,
+                                    description: expense.description,
+                                    amount: Number(expense.amount),
+                                    category: expense.category,
+                                    paid_by: expense.paid_by,
+                                    group_id: groupId!,
+                                    splits: expense.splits,
+                                  })}
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => setExpenseToDelete({ id: expense.id, description: expense.description })}
