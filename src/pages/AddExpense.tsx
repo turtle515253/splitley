@@ -16,16 +16,94 @@ import { toast } from 'sonner';
 import { useGroups, GroupMember } from '@/hooks/useGroups';
 import { useCreateExpense } from '@/hooks/useExpenses';
 
-const categories: { id: ExpenseCategory; label: string }[] = [
-  { id: 'food', label: 'Food & Dining' },
-  { id: 'transport', label: 'Transport' },
-  { id: 'entertainment', label: 'Entertainment' },
-  { id: 'shopping', label: 'Shopping' },
-  { id: 'utilities', label: 'Utilities' },
-  { id: 'rent', label: 'Rent' },
-  { id: 'travel', label: 'Travel' },
-  { id: 'other', label: 'Other' },
+interface CategoryGroup {
+  name: string;
+  items: { id: ExpenseCategory; label: string }[];
+}
+
+const categoryGroups: CategoryGroup[] = [
+  {
+    name: 'Entertainment',
+    items: [
+      { id: 'games', label: 'Games' },
+      { id: 'movies', label: 'Movies' },
+      { id: 'music', label: 'Music' },
+      { id: 'entertainment_other', label: 'Other' },
+      { id: 'sports', label: 'Sports' },
+    ],
+  },
+  {
+    name: 'Food and drink',
+    items: [
+      { id: 'dining_out', label: 'Dining out' },
+      { id: 'groceries', label: 'Groceries' },
+      { id: 'liquor', label: 'Liquor' },
+      { id: 'food_other', label: 'Other' },
+    ],
+  },
+  {
+    name: 'Home',
+    items: [
+      { id: 'electronics', label: 'Electronics' },
+      { id: 'furniture', label: 'Furniture' },
+      { id: 'household_supplies', label: 'Household supplies' },
+      { id: 'maintenance', label: 'Maintenance' },
+      { id: 'mortgage', label: 'Mortgage' },
+      { id: 'home_other', label: 'Other' },
+      { id: 'pets', label: 'Pets' },
+      { id: 'rent', label: 'Rent' },
+      { id: 'services', label: 'Services' },
+    ],
+  },
+  {
+    name: 'Life',
+    items: [
+      { id: 'childcare', label: 'Childcare' },
+      { id: 'clothing', label: 'Clothing' },
+      { id: 'education', label: 'Education' },
+      { id: 'gifts', label: 'Gifts' },
+      { id: 'insurance', label: 'Insurance' },
+      { id: 'medical', label: 'Medical expenses' },
+      { id: 'life_other', label: 'Other' },
+      { id: 'taxes', label: 'Taxes' },
+    ],
+  },
+  {
+    name: 'Transportation',
+    items: [
+      { id: 'bicycle', label: 'Bicycle' },
+      { id: 'bus_train', label: 'Bus/train' },
+      { id: 'car', label: 'Car' },
+      { id: 'gas_fuel', label: 'Gas/fuel' },
+      { id: 'hotel', label: 'Hotel' },
+      { id: 'transport_other', label: 'Other' },
+      { id: 'parking', label: 'Parking' },
+      { id: 'plane', label: 'Plane' },
+      { id: 'taxi', label: 'Taxi' },
+    ],
+  },
+  {
+    name: 'Utilities',
+    items: [
+      { id: 'cleaning', label: 'Cleaning' },
+      { id: 'electricity', label: 'Electricity' },
+      { id: 'heat_gas', label: 'Heat/gas' },
+      { id: 'utilities_other', label: 'Other' },
+      { id: 'trash', label: 'Trash' },
+      { id: 'tv_phone_internet', label: 'TV/Phone/Internet' },
+      { id: 'water', label: 'Water' },
+    ],
+  },
+  {
+    name: 'Uncategorized',
+    items: [
+      { id: 'general', label: 'General' },
+    ],
+  },
 ];
+
+// Flat list for lookup
+const allCategories = categoryGroups.flatMap(g => g.items);
 
 const AddExpense = () => {
   const navigate = useNavigate();
@@ -218,7 +296,7 @@ const AddExpense = () => {
                     <>
                       <span className="text-xl">{getCategoryIcon(category)}</span>
                       <span className="font-medium">
-                        {categories.find(c => c.id === category)?.label}
+                        {allCategories.find(c => c.id === category)?.label}
                       </span>
                     </>
                   ) : (
@@ -232,24 +310,31 @@ const AddExpense = () => {
               </button>
               
               {showCategoryPicker && (
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setCategory(cat.id);
-                        setShowCategoryPicker(false);
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 p-3 rounded-xl transition-all",
-                        category === cat.id 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-accent hover:bg-accent/80"
-                      )}
-                    >
-                      <span>{getCategoryIcon(cat.id)}</span>
-                      <span className="text-sm font-medium">{cat.label}</span>
-                    </button>
+                <div className="mt-4 pt-4 border-t max-h-64 overflow-y-auto space-y-4">
+                  {categoryGroups.map((group) => (
+                    <div key={group.name}>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">{group.name}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {group.items.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => {
+                              setCategory(cat.id);
+                              setShowCategoryPicker(false);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 p-3 rounded-xl transition-all",
+                              category === cat.id 
+                                ? "bg-primary text-primary-foreground" 
+                                : "bg-accent hover:bg-accent/80"
+                            )}
+                          >
+                            <span>{getCategoryIcon(cat.id)}</span>
+                            <span className="text-sm font-medium">{cat.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

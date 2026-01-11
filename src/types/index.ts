@@ -34,14 +34,56 @@ export interface Balance {
 }
 
 export type ExpenseCategory = 
-  | 'food'
-  | 'transport'
-  | 'entertainment'
-  | 'shopping'
-  | 'utilities'
+  // Entertainment
+  | 'games'
+  | 'movies'
+  | 'music'
+  | 'entertainment_other'
+  | 'sports'
+  // Food and drink
+  | 'dining_out'
+  | 'groceries'
+  | 'liquor'
+  | 'food_other'
+  // Home
+  | 'electronics'
+  | 'furniture'
+  | 'household_supplies'
+  | 'maintenance'
+  | 'mortgage'
+  | 'home_other'
+  | 'pets'
   | 'rent'
-  | 'travel'
-  | 'other';
+  | 'services'
+  // Life
+  | 'childcare'
+  | 'clothing'
+  | 'education'
+  | 'gifts'
+  | 'insurance'
+  | 'medical'
+  | 'life_other'
+  | 'taxes'
+  // Transportation
+  | 'bicycle'
+  | 'bus_train'
+  | 'car'
+  | 'gas_fuel'
+  | 'hotel'
+  | 'transport_other'
+  | 'parking'
+  | 'plane'
+  | 'taxi'
+  // Utilities
+  | 'cleaning'
+  | 'electricity'
+  | 'heat_gas'
+  | 'utilities_other'
+  | 'trash'
+  | 'tv_phone_internet'
+  | 'water'
+  // Uncategorized
+  | 'general';
 
 export interface Activity {
   id: string;
