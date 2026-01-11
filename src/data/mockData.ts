@@ -166,6 +166,8 @@ export const getCategoryIcon = (category: string) => {
     dining_out: '🍽️',
     groceries: '🛒',
     liquor: '🍷',
+    tea_coffee: '☕',
+    soft_drinks: '🥤',
     food_other: '🍔',
     // Home
     electronics: '⚡',

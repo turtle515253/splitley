@@ -38,6 +38,8 @@ const categoryGroups: CategoryGroup[] = [
       { id: 'dining_out', label: 'Dining out' },
       { id: 'groceries', label: 'Groceries' },
       { id: 'liquor', label: 'Liquor' },
+      { id: 'tea_coffee', label: 'Tea & Coffee' },
+      { id: 'soft_drinks', label: 'Soft Drinks' },
       { id: 'food_other', label: 'Other' },
     ],
   },
