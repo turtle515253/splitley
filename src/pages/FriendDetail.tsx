@@ -9,6 +9,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { SettleUpDialog } from '@/components/friends/SettleUpDialog';
 import { RemindDialog } from '@/components/friends/RemindDialog';
+import { SettlementHistory } from '@/components/friends/SettlementHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function FriendDetail() {
@@ -162,6 +163,8 @@ export default function FriendDetail() {
             </div>
           </CardContent>
         </Card>
+
+        <SettlementHistory friendId={friend.id} friendName={friend.name} />
       </div>
     </div>
   );
