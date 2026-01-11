@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroup, GroupMember } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, X, MoreVertical, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, X, MoreVertical, Trash2, Pencil, BarChart3, Wallet } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
@@ -43,6 +43,7 @@ const GroupDetail = () => {
     group_id: string;
     splits?: { user_id: string; amount: number }[];
   } | null>(null);
+  const [showBalanceSummary, setShowBalanceSummary] = useState(false);
   const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
@@ -201,18 +202,44 @@ const GroupDetail = () => {
           </div>
         </div>
 
-        {/* Balance Summary */}
+        {/* Action Buttons */}
         <div className="px-5 mb-6">
-          <GroupBalanceSummary
-            members={group.members}
-            expenses={group.expenses.map((e) => ({
-              id: e.id,
-              amount: Number(e.amount),
-              paid_by: e.paid_by,
-              splits: e.splits,
-            }))}
-          />
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0"
+              onClick={() => {}}
+            >
+              <BarChart3 className="h-4 w-4 mr-1.5" />
+              Charts
+            </Button>
+            <Button
+              variant={showBalanceSummary ? "default" : "outline"}
+              size="sm"
+              className="flex-shrink-0"
+              onClick={() => setShowBalanceSummary(!showBalanceSummary)}
+            >
+              <Wallet className="h-4 w-4 mr-1.5" />
+              Balances
+            </Button>
+          </div>
         </div>
+
+        {/* Balance Summary */}
+        {showBalanceSummary && (
+          <div className="px-5 mb-6">
+            <GroupBalanceSummary
+              members={group.members}
+              expenses={group.expenses.map((e) => ({
+                id: e.id,
+                amount: Number(e.amount),
+                paid_by: e.paid_by,
+                splits: e.splits,
+              }))}
+            />
+          </div>
+        )}
 
         {/* Expenses */}
         <div className="px-5 pb-8">
