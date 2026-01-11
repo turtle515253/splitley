@@ -53,7 +53,8 @@ export function FriendBalanceList() {
               No balances yet. Add an expense to get started!
             </p>
           ) : (
-            balances.map((balance, index) => (
+            // Sort: show people you owe first (negative), then people who owe you (positive)
+            [...balances].sort((a, b) => a.amount - b.amount).map((balance, index) => (
               <div
                 key={balance.user.id}
                 onClick={() => navigate(`/friend/${balance.user.id}`)}
