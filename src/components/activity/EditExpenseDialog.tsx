@@ -175,7 +175,7 @@ export function EditExpenseDialog({
     }
   }, [expense, open, groupMembers]);
 
-  const availableMembers = groupMembers.filter(m => m.user_id !== user?.id);
+  const availableMembers = groupMembers.filter(m => m.user_id !== paidBy);
   const paidByMember = groupMembers.find(m => m.user_id === paidBy);
 
   const toggleMember = (userId: string) => {
