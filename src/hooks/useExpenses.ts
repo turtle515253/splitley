@@ -251,7 +251,7 @@ export function useSettleUp() {
         .eq('is_settled', false)
         .eq('expenses.paid_by', friendId);
 
-      // Get splits where friend owes user (user paid)
+      // Get splits where friend owes user (user paid) - current user CAN settle these now
       const { data: owedByFriend } = await supabase
         .from('expense_splits')
         .select(`
@@ -280,20 +280,26 @@ export function useSettleUp() {
             splitsToSettle.push(split.id);
             remainingAmount -= Number(split.amount);
           } else if (remainingAmount > 0) {
-            // Partial settlement - for simplicity, mark as settled if we're close enough
             splitsToSettle.push(split.id);
             remainingAmount = 0;
           }
           if (remainingAmount <= 0) break;
         }
       } else {
-        // Friend owes user - we can't settle their splits (RLS prevents it)
-        // But we can mark the settlement as recorded
-        // For now, just acknowledge the payment was made
-        console.log(`Friend ${friendId} paid ${amount} to user ${user.id}`);
+        // Friend owes user - settle their splits (user is the payer, so RLS allows it now)
+        for (const split of (owedByFriend || []).sort((a, b) => Number(a.amount) - Number(b.amount))) {
+          if (remainingAmount >= Number(split.amount)) {
+            splitsToSettle.push(split.id);
+            remainingAmount -= Number(split.amount);
+          } else if (remainingAmount > 0) {
+            splitsToSettle.push(split.id);
+            remainingAmount = 0;
+          }
+          if (remainingAmount <= 0) break;
+        }
       }
 
-      // Settle the splits the current user owns
+      // Settle the splits
       if (splitsToSettle.length > 0) {
         const { error } = await supabase
           .from('expense_splits')
@@ -308,10 +314,12 @@ export function useSettleUp() {
 
       return { settledCount: splitsToSettle.length, amount };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['balances'] }),
+        queryClient.invalidateQueries({ queryKey: ['activities'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+      ]);
     },
     onError: (error) => {
       console.error('Error settling up:', error);
