@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { useSettleUp } from '@/hooks/useExpenses';
+import { CheckCircle } from 'lucide-react';
 
 interface Friend {
   id: string;
@@ -26,11 +27,15 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
   const { formatCurrency, currency } = useCurrency();
   const settleUp = useSettleUp();
   const [amount, setAmount] = useState(Math.abs(balanceAmount).toString());
+  const [isSettled, setIsSettled] = useState(false);
+  const [settledAmount, setSettledAmount] = useState(0);
 
   // Reset amount when dialog opens with new balance
   useEffect(() => {
     if (open) {
       setAmount(Math.abs(balanceAmount).toString());
+      setIsSettled(false);
+      setSettledAmount(0);
     }
   }, [open, balanceAmount]);
 
@@ -47,10 +52,16 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
     settleUp.mutate(
       { friendId: friend.id, amount: numAmount },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
+          setSettledAmount(numAmount);
+          setIsSettled(true);
           toast.success(`Payment of ${formatCurrency(numAmount)} recorded!`);
           onSettle?.(numAmount);
-          onOpenChange(false);
+          
+          // Auto-close after showing success state
+          setTimeout(() => {
+            onOpenChange(false);
+          }, 2000);
         },
       }
     );
@@ -59,6 +70,33 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
   const handleFullSettle = () => {
     setAmount(suggestedAmount.toString());
   };
+
+  // Show success state after settlement
+  if (isSettled) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="h-16 w-16 rounded-full bg-positive/20 flex items-center justify-center animate-scale-in">
+              <CheckCircle className="h-10 w-10 text-positive" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold">Payment Recorded!</h3>
+              <p className="text-muted-foreground">
+                {isYouOwe 
+                  ? `You paid ${friend.name.split(' ')[0]} ${formatCurrency(settledAmount)}`
+                  : `${friend.name.split(' ')[0]} paid you ${formatCurrency(settledAmount)}`
+                }
+              </p>
+            </div>
+            <Button onClick={() => onOpenChange(false)} className="mt-4">
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
