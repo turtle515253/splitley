@@ -10,7 +10,7 @@ import { getCategoryIcon } from '@/data/mockData';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ExpenseCategory } from '@/types';
-import { X, ChevronDown, Check, Camera, Loader2 } from 'lucide-react';
+import { X, ChevronDown, Check, Camera, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useGroups, GroupMember } from '@/hooks/useGroups';
@@ -123,6 +123,7 @@ const AddExpense = () => {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(preselectedGroupId);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const [paidBy, setPaidBy] = useState<string>(user?.id || '');
   const [showPaidByPicker, setShowPaidByPicker] = useState(false);
@@ -312,32 +313,59 @@ const AddExpense = () => {
               </button>
               
               {showCategoryPicker && (
-                <div className="mt-4 pt-4 border-t max-h-64 overflow-y-auto space-y-4">
-                  {categoryGroups.map((group) => (
-                    <div key={group.name}>
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">{group.name}</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {group.items.map((cat) => (
-                          <button
-                            key={cat.id}
-                            onClick={() => {
-                              setCategory(cat.id);
-                              setShowCategoryPicker(false);
-                            }}
-                            className={cn(
-                              "flex items-center gap-2 p-3 rounded-xl transition-all",
-                              category === cat.id 
-                                ? "bg-primary text-primary-foreground" 
-                                : "bg-accent hover:bg-accent/80"
-                            )}
-                          >
-                            <span>{getCategoryIcon(cat.id)}</span>
-                            <span className="text-sm font-medium">{cat.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-4 pt-4 border-t">
+                  {/* Category Search */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search categories..."
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-4">
+                    {categoryGroups
+                      .map((group) => {
+                        const filteredItems = group.items.filter((cat) =>
+                          cat.label.toLowerCase().includes(categorySearch.toLowerCase())
+                        );
+                        if (filteredItems.length === 0) return null;
+                        return (
+                          <div key={group.name}>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">{group.name}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {filteredItems.map((cat) => (
+                                <button
+                                  key={cat.id}
+                                  onClick={() => {
+                                    setCategory(cat.id);
+                                    setShowCategoryPicker(false);
+                                    setCategorySearch('');
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-2 p-3 rounded-xl transition-all",
+                                    category === cat.id 
+                                      ? "bg-primary text-primary-foreground" 
+                                      : "bg-accent hover:bg-accent/80"
+                                  )}
+                                >
+                                  <span>{getCategoryIcon(cat.id)}</span>
+                                  <span className="text-sm font-medium">{cat.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })
+                      .filter(Boolean)}
+                    {categoryGroups.every((group) =>
+                      group.items.every((cat) => !cat.label.toLowerCase().includes(categorySearch.toLowerCase()))
+                    ) && (
+                      <p className="text-center text-muted-foreground py-4">No categories found</p>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
