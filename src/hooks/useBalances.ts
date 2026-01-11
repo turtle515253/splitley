@@ -237,6 +237,12 @@ export function useBalances() {
         }
       }
 
+      // Get settlements between users
+      const { data: settlements } = await supabase
+        .from('settlements')
+        .select('id, payer_id, receiver_id, amount')
+        .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`);
+
       // Calculate net balance for each user: total_paid - total_share
       // Only consider unsettled splits
       const userNetBalances = new Map<string, UserNetBalance>();
@@ -282,6 +288,33 @@ export function useBalances() {
             userNetBalances.set(split.user_id, splitUser);
           }
         }
+      }
+
+      // Apply settlements to net balances
+      for (const settlement of settlements || []) {
+        const payerId = settlement.payer_id;
+        const receiverId = settlement.receiver_id;
+        const amount = Number(settlement.amount);
+
+        // Payer's balance increases (they paid, so they're owed less or owe more credit)
+        const payerBalance = userNetBalances.get(payerId) || {
+          id: payerId,
+          name: '',
+          avatar: undefined,
+          netBalance: 0,
+        };
+        payerBalance.netBalance += amount;
+        userNetBalances.set(payerId, payerBalance);
+
+        // Receiver's balance decreases (they received money, so they're owed more or owe less)
+        const receiverBalance = userNetBalances.get(receiverId) || {
+          id: receiverId,
+          name: '',
+          avatar: undefined,
+          netBalance: 0,
+        };
+        receiverBalance.netBalance -= amount;
+        userNetBalances.set(receiverId, receiverBalance);
       }
 
       // Get profiles for all users

@@ -49,13 +49,15 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
       return;
     }
 
+    // friendOwesUser is true when balance > 0 (they owe us, so they are paying us)
+    const friendOwesUser = balanceAmount > 0;
+
     settleUp.mutate(
-      { friendId: friend.id, amount: numAmount },
+      { friendId: friend.id, amount: numAmount, friendOwesUser },
       {
         onSuccess: (result) => {
           setSettledAmount(numAmount);
           setIsSettled(true);
-          toast.success(`Payment of ${formatCurrency(numAmount)} recorded!`);
           onSettle?.(numAmount);
           
           // Auto-close after showing success state

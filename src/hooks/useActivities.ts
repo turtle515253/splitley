@@ -57,42 +57,40 @@ export function useActivities() {
         }
       }
 
-      // Fetch settled payments
+      // Fetch settlements from the settlements table
       const { data: settlements } = await supabase
-        .from('expense_splits')
+        .from('settlements')
         .select(`
           id,
           amount,
-          settled_at,
-          user_id,
-          expense_id,
-          expenses (
-            description,
-            paid_by,
-            profiles:paid_by (display_name)
-          )
+          created_at,
+          payer_id,
+          receiver_id,
+          payer:payer_id (display_name),
+          receiver:receiver_id (display_name)
         `)
-        .eq('is_settled', true)
-        .not('settled_at', 'is', null)
-        .order('settled_at', { ascending: false })
-        .limit(20);
+        .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (settlements) {
         for (const settlement of settlements) {
-          const expense = settlement.expenses as any;
-          if (!expense) continue;
+          const payer = settlement.payer as any;
+          const receiver = settlement.receiver as any;
           
-          const payerName = expense.paid_by === user.id 
+          const payerName = settlement.payer_id === user.id 
             ? 'You' 
-            : expense.profiles?.display_name || 'Someone';
-          const payeeName = settlement.user_id === user.id ? 'You' : 'Someone';
+            : payer?.display_name || 'Someone';
+          const receiverName = settlement.receiver_id === user.id 
+            ? 'you' 
+            : receiver?.display_name || 'someone';
           
           activities.push({
-            id: `payment-${settlement.id}`,
+            id: `settlement-${settlement.id}`,
             type: 'payment_made',
-            description: `${payeeName} paid ${payerName} for "${expense.description}"`,
+            description: `${payerName} paid ${receiverName}`,
             amount: Number(settlement.amount),
-            createdAt: new Date(settlement.settled_at!),
+            createdAt: new Date(settlement.created_at),
           });
         }
       }
