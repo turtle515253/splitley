@@ -15,6 +15,8 @@ import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
 import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
+import { GroupDebtsCard } from '@/components/groups/GroupDebtsCard';
+import { GroupSettlementHistory } from '@/components/groups/GroupSettlementHistory';
 import { GroupChartsDialog } from '@/components/groups/GroupChartsDialog';
 import { getCategoryIcon } from '@/data/mockData';
 import {
@@ -230,7 +232,17 @@ const GroupDetail = () => {
 
         {/* Balance Summary */}
         {showBalanceSummary && (
-          <div className="px-5 mb-6">
+          <div className="px-5 mb-6 space-y-4">
+            <GroupDebtsCard
+              members={group.members}
+              expenses={group.expenses.map((e) => ({
+                id: e.id,
+                amount: Number(e.amount),
+                paid_by: e.paid_by,
+                splits: e.splits,
+              }))}
+              groupId={groupId!}
+            />
             <GroupBalanceSummary
               members={group.members}
               expenses={group.expenses.map((e) => ({
@@ -239,7 +251,9 @@ const GroupDetail = () => {
                 paid_by: e.paid_by,
                 splits: e.splits,
               }))}
+              groupId={groupId}
             />
+            <GroupSettlementHistory groupId={groupId!} />
           </div>
         )}
 

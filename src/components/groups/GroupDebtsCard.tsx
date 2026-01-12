@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowRight, Handshake } from 'lucide-react';
+import { ArrowRight, Handshake, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { GroupSettleDialog } from './GroupSettleDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGroupSettlements, GroupSettlement } from '@/hooks/useGroupSettlements';
 
 interface Member {
   user_id: string;
@@ -32,7 +33,11 @@ interface GroupDebtsCardProps {
   groupId: string;
 }
 
-function calculateSimplifiedDebts(members: Member[], expenses: Expense[]): SimplifiedDebt[] {
+function calculateSimplifiedDebts(
+  members: Member[], 
+  expenses: Expense[],
+  settlements: GroupSettlement[]
+): SimplifiedDebt[] {
   // Calculate net balance for each member
   const balances: Record<string, number> = {};
   
@@ -41,7 +46,7 @@ function calculateSimplifiedDebts(members: Member[], expenses: Expense[]): Simpl
     balances[m.user_id] = 0;
   });
 
-  // Calculate what each person paid vs what they owe
+  // Calculate what each person paid vs what they owe from expenses
   for (const expense of expenses) {
     // Person who paid gets credit
     if (balances[expense.paid_by] !== undefined) {
@@ -53,6 +58,17 @@ function calculateSimplifiedDebts(members: Member[], expenses: Expense[]): Simpl
       if (balances[split.user_id] !== undefined) {
         balances[split.user_id] -= Number(split.amount);
       }
+    }
+  }
+
+  // Apply settlements - when payer pays receiver, payer's balance increases (less in debt)
+  // and receiver's balance decreases (received less)
+  for (const settlement of settlements) {
+    if (balances[settlement.payer_id] !== undefined) {
+      balances[settlement.payer_id] += Number(settlement.amount);
+    }
+    if (balances[settlement.receiver_id] !== undefined) {
+      balances[settlement.receiver_id] -= Number(settlement.amount);
     }
   }
 
@@ -105,11 +121,32 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
   const [settleDebt, setSettleDebt] = useState<SimplifiedDebt | null>(null);
+  const { data: settlements = [] } = useGroupSettlements(groupId);
 
-  const simplifiedDebts = calculateSimplifiedDebts(members, expenses);
+  const simplifiedDebts = calculateSimplifiedDebts(members, expenses, settlements);
 
-  if (expenses.length === 0 || simplifiedDebts.length === 0) {
+  if (expenses.length === 0) {
     return null;
+  }
+
+  // All settled up
+  if (simplifiedDebts.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Handshake className="h-4 w-4" />
+            Who Owes Whom
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center gap-2 py-4 text-positive">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-medium">All settled up!</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

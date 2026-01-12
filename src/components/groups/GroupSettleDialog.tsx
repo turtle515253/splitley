@@ -38,7 +38,7 @@ export function GroupSettleDialog({
   debt,
   groupId,
 }: GroupSettleDialogProps) {
-  const { formatCurrency, currencySymbol } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
   const [amount, setAmount] = useState('');
   const [isSettled, setIsSettled] = useState(false);
   const [settledAmount, setSettledAmount] = useState(0);
@@ -150,12 +150,11 @@ export function GroupSettleDialog({
             </Button>
           </div>
 
-          {/* Amount input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Payment Amount</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {currencySymbol}
+                {currency.symbol}
               </span>
               <Input
                 type="number"
