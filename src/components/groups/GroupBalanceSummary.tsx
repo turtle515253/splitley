@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useGroupSettlements, GroupSettlement } from '@/hooks/useGroupSettlements';
 
 interface Member {
   user_id: string;
@@ -19,6 +20,7 @@ interface Expense {
 interface GroupBalanceSummaryProps {
   members: Member[];
   expenses: Expense[];
+  groupId?: string;
 }
 
 interface MemberBalance {
@@ -30,11 +32,12 @@ interface MemberBalance {
   netBalance: number;
 }
 
-export function GroupBalanceSummary({ members, expenses }: GroupBalanceSummaryProps) {
-  const { formatCurrency } = useCurrency();
-
-  // Calculate each member's contribution and share
-  const memberBalances: MemberBalance[] = members.map((member) => {
+function calculateMemberBalances(
+  members: Member[], 
+  expenses: Expense[],
+  settlements: GroupSettlement[]
+): MemberBalance[] {
+  return members.map((member) => {
     let totalPaid = 0;
     let totalShare = 0;
 
@@ -51,6 +54,16 @@ export function GroupBalanceSummary({ members, expenses }: GroupBalanceSummaryPr
       }
     }
 
+    // Add settlements - payments made increase "paid", payments received increase "share"
+    for (const settlement of settlements) {
+      if (settlement.payer_id === member.user_id) {
+        totalPaid += Number(settlement.amount);
+      }
+      if (settlement.receiver_id === member.user_id) {
+        totalShare += Number(settlement.amount);
+      }
+    }
+
     return {
       user_id: member.user_id,
       display_name: member.display_name || 'Unknown',
@@ -60,6 +73,14 @@ export function GroupBalanceSummary({ members, expenses }: GroupBalanceSummaryPr
       netBalance: Math.round(totalPaid - totalShare),
     };
   });
+}
+
+export function GroupBalanceSummary({ members, expenses, groupId }: GroupBalanceSummaryProps) {
+  const { formatCurrency } = useCurrency();
+  const { data: settlements = [] } = useGroupSettlements(groupId);
+
+  // Calculate each member's contribution and share
+  const memberBalances = calculateMemberBalances(members, expenses, settlements);
 
   // Sort by net balance (creditors first)
   memberBalances.sort((a, b) => b.netBalance - a.netBalance);

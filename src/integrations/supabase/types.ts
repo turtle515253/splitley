@@ -188,6 +188,44 @@ export type Database = {
           },
         ]
       }
+      group_settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          group_id: string
+          id: string
+          note: string | null
+          payer_id: string
+          receiver_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          group_id: string
+          id?: string
+          note?: string | null
+          payer_id: string
+          receiver_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          group_id?: string
+          id?: string
+          note?: string | null
+          payer_id?: string
+          receiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_settlements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string

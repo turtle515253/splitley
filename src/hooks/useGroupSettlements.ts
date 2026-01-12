@@ -9,6 +9,7 @@ export interface GroupSettlement {
   receiver_id: string;
   amount: number;
   group_id: string;
+  note?: string;
   created_at: string;
   payer_profile?: {
     display_name: string | null;
@@ -20,6 +21,16 @@ export interface GroupSettlement {
   };
 }
 
+interface GroupSettlementRow {
+  id: string;
+  payer_id: string;
+  receiver_id: string;
+  amount: number;
+  group_id: string;
+  note: string | null;
+  created_at: string;
+}
+
 export function useGroupSettlements(groupId: string | undefined) {
   const { user } = useAuth();
 
@@ -28,7 +39,8 @@ export function useGroupSettlements(groupId: string | undefined) {
     queryFn: async (): Promise<GroupSettlement[]> => {
       if (!groupId) return [];
 
-      const { data, error } = await supabase
+      // Use type assertion since the table is newly created
+      const { data, error } = await (supabase as any)
         .from('group_settlements')
         .select('*')
         .eq('group_id', groupId)
@@ -36,9 +48,11 @@ export function useGroupSettlements(groupId: string | undefined) {
 
       if (error) throw error;
 
+      const rows = (data || []) as GroupSettlementRow[];
+
       // Fetch profiles for payers and receivers
       const settlements = await Promise.all(
-        (data || []).map(async (settlement) => {
+        rows.map(async (settlement) => {
           const [payerProfile, receiverProfile] = await Promise.all([
             supabase
               .from('profiles_display')
@@ -81,7 +95,8 @@ export function useGroupSettle() {
       amount: number;
       groupId: string;
     }) => {
-      const { data, error } = await supabase
+      // Use type assertion since the table is newly created
+      const { data, error } = await (supabase as any)
         .from('group_settlements')
         .insert({
           payer_id: payerId,
