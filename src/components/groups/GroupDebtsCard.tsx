@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGroupSettlements, GroupSettlement } from '@/hooks/useGroupSettlements';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { simplifyDebts, SimplifiedDebt as SharedSimplifiedDebt } from '@/lib/simplifyDebts';
 
 interface Member {
   user_id: string;
@@ -42,9 +43,7 @@ interface Settlement {
 }
 
 /**
- * Splitwise-style debt simplification algorithm with full settlement priority
- * Goal: Each person pays/receives from as few people as possible
- * Strategy: Try to match each debtor with a single creditor when possible
+ * Calculate simplified debts for a group using the shared algorithm
  */
 function calculateSimplifiedDebts(
   members: Member[], 
@@ -110,85 +109,32 @@ function calculateSimplifiedDebts(
     }
   }
 
-  // Separate creditors (positive balance) and debtors (negative balance)
-  const creditors: { member: Member; amount: number }[] = [];
-  const debtors: { member: Member; amount: number }[] = [];
-
+  // Build the balance map for the shared simplification algorithm
+  const balanceMap = new Map<string, { balance: number; member: { id: string; name?: string; avatar?: string } }>();
+  
   members.forEach(member => {
-    const balance = Math.round(balances[member.user_id] || 0);
-    if (balance > 0) {
-      creditors.push({ member, amount: balance });
-    } else if (balance < 0) {
-      debtors.push({ member, amount: Math.abs(balance) });
-    }
+    const balance = balances[member.user_id] || 0;
+    balanceMap.set(member.user_id, {
+      balance,
+      member: {
+        id: member.user_id,
+        name: member.display_name || undefined,
+        avatar: member.avatar_url || undefined,
+      },
+    });
   });
 
-  // Sort by amount (largest first)
-  creditors.sort((a, b) => b.amount - a.amount);
-  debtors.sort((a, b) => b.amount - a.amount);
+  // Use the shared simplification algorithm
+  const sharedDebts = simplifyDebts(balanceMap);
 
-  const transactions: SimplifiedDebt[] = [];
-
-  // Phase 1: Try to find exact matches (debtor amount = creditor amount)
-  for (let d = 0; d < debtors.length; d++) {
-    if (debtors[d].amount < 1) continue;
-    
-    for (let c = 0; c < creditors.length; c++) {
-      if (creditors[c].amount < 1) continue;
-      
-      // Check for exact or near-exact match
-      if (Math.abs(debtors[d].amount - creditors[c].amount) < 1) {
-        transactions.push({
-          from: debtors[d].member,
-          to: creditors[c].member,
-          amount: debtors[d].amount,
-        });
-        creditors[c].amount = 0;
-        debtors[d].amount = 0;
-        break;
-      }
-    }
-  }
-
-  // Phase 2: Match remaining debtors to creditors
-  // Strategy: Each debtor pays to the largest available creditor(s)
-  for (const debtor of debtors) {
-    if (debtor.amount < 1) continue;
-    
-    // Find a single creditor who can absorb this debtor's full amount
-    const singleCreditor = creditors.find(c => c.amount >= debtor.amount - 0.01 && c.amount > 0);
-    
-    if (singleCreditor) {
-      // Debtor pays full amount to single creditor
-      transactions.push({
-        from: debtor.member,
-        to: singleCreditor.member,
-        amount: debtor.amount,
-      });
-      singleCreditor.amount -= debtor.amount;
-      debtor.amount = 0;
-    } else {
-      // Must split across multiple creditors - pay to largest first
-      for (const creditor of creditors) {
-        if (debtor.amount < 1) break;
-        if (creditor.amount < 1) continue;
-        
-        const transferAmount = Math.min(creditor.amount, debtor.amount);
-        
-        transactions.push({
-          from: debtor.member,
-          to: creditor.member,
-          amount: transferAmount,
-        });
-        
-        creditor.amount -= transferAmount;
-        debtor.amount -= transferAmount;
-      }
-    }
-  }
-
-  // Filter out zero-amount transactions
-  return transactions.filter(t => t.amount > 0);
+  // Convert to the local SimplifiedDebt format
+  const memberMap = new Map(members.map(m => [m.user_id, m]));
+  
+  return sharedDebts.map(debt => ({
+    from: memberMap.get(debt.from.id) || { user_id: debt.from.id, display_name: debt.from.name || null, avatar_url: debt.from.avatar || null },
+    to: memberMap.get(debt.to.id) || { user_id: debt.to.id, display_name: debt.to.name || null, avatar_url: debt.to.avatar || null },
+    amount: debt.amount,
+  }));
 }
 
 export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardProps) {

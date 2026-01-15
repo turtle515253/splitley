@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { simplifyDebts, SimplifiedDebt } from '@/lib/simplifyDebts';
 
 export interface FriendBalance {
   oderId: string;
@@ -11,6 +12,7 @@ export interface FriendBalance {
   };
   amount: number; // positive = they owe you (simplified), negative = you owe them (simplified)
 }
+
 export function useBalances() {
   const { user } = useAuth();
 
@@ -96,34 +98,63 @@ export function useBalances() {
         }
       }
 
-      // Get settlements between current user and others
+      // Get all settlements
       const { data: settlements } = await supabase
         .from('settlements')
-        .select('id, payer_id, receiver_id, amount')
-        .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`);
+        .select('id, payer_id, receiver_id, amount');
 
-      // Calculate PAIRWISE balances: what each friend owes YOU directly
-      // Positive = they owe you, Negative = you owe them
-      const pairwiseBalances = new Map<string, number>();
+      // Get all group settlements for groups the user is in
+      const { data: groupSettlements } = await supabase
+        .from('group_settlements')
+        .select('id, payer_id, receiver_id, amount, group_id')
+        .in('group_id', groupIds.length > 0 ? groupIds : ['00000000-0000-0000-0000-000000000000']);
+
+      // Collect all unique user IDs involved
+      const allUserIds = new Set<string>();
+      allUserIds.add(user.id);
+      
+      for (const expense of allExpenses.values()) {
+        allUserIds.add(expense.paid_by);
+        for (const split of expense.expense_splits || []) {
+          allUserIds.add(split.user_id);
+        }
+      }
+      
+      for (const s of settlements || []) {
+        allUserIds.add(s.payer_id);
+        allUserIds.add(s.receiver_id);
+      }
+      
+      for (const gs of groupSettlements || []) {
+        allUserIds.add(gs.payer_id);
+        allUserIds.add(gs.receiver_id);
+      }
+
+      // Calculate NET BALANCE for each user across ALL expenses
+      // Positive = they're owed money, Negative = they owe money
+      const netBalances = new Map<string, number>();
+      
+      for (const userId of allUserIds) {
+        netBalances.set(userId, 0);
+      }
 
       for (const expense of allExpenses.values()) {
-        const splits = expense.expense_splits || [];
-        const unsettledSplits = splits.filter((s: any) => s.is_settled !== true);
+        const unsettledSplits = (expense.expense_splits || []).filter((s: any) => s.is_settled !== true);
         
-        if (expense.paid_by === user.id) {
-          // Current user paid - each person's unsettled split amount is what they owe you
-          for (const split of unsettledSplits) {
-            if (split.user_id !== user.id) {
-              const current = pairwiseBalances.get(split.user_id) || 0;
-              pairwiseBalances.set(split.user_id, current + Number(split.amount));
-            }
-          }
-        } else {
-          // Someone else paid - find current user's unsettled split (what you owe them)
-          const myUnsettledSplit = unsettledSplits.find((s: any) => s.user_id === user.id);
-          if (myUnsettledSplit) {
-            const current = pairwiseBalances.get(expense.paid_by) || 0;
-            pairwiseBalances.set(expense.paid_by, current - Number(myUnsettledSplit.amount));
+        // Calculate total unsettled amount that others owe the payer
+        const totalUnsettled = unsettledSplits
+          .filter((s: any) => s.user_id !== expense.paid_by)
+          .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+        
+        // Person who paid gets credit for what others still owe them
+        const payerBalance = netBalances.get(expense.paid_by) || 0;
+        netBalances.set(expense.paid_by, payerBalance + totalUnsettled);
+
+        // Each person's unsettled share is their debt
+        for (const split of unsettledSplits) {
+          if (split.user_id !== expense.paid_by) {
+            const current = netBalances.get(split.user_id) || 0;
+            netBalances.set(split.user_id, current - Number(split.amount));
           }
         }
       }
@@ -131,21 +162,26 @@ export function useBalances() {
       // Apply settlements
       for (const settlement of settlements || []) {
         const amount = Number(settlement.amount);
+        // Payer's balance increases (less in debt), receiver's balance decreases
+        const payerBalance = netBalances.get(settlement.payer_id) || 0;
+        netBalances.set(settlement.payer_id, payerBalance + amount);
+        
+        const receiverBalance = netBalances.get(settlement.receiver_id) || 0;
+        netBalances.set(settlement.receiver_id, receiverBalance - amount);
+      }
 
-        if (settlement.payer_id === user.id) {
-          // Current user paid someone - reduce what you owe them (or increase what they owe you)
-          const current = pairwiseBalances.get(settlement.receiver_id) || 0;
-          pairwiseBalances.set(settlement.receiver_id, current + amount);
-        } else if (settlement.receiver_id === user.id) {
-          // Someone paid current user - reduce what they owe you
-          const current = pairwiseBalances.get(settlement.payer_id) || 0;
-          pairwiseBalances.set(settlement.payer_id, current - amount);
-        }
+      // Apply group settlements
+      for (const settlement of groupSettlements || []) {
+        const amount = Number(settlement.amount);
+        const payerBalance = netBalances.get(settlement.payer_id) || 0;
+        netBalances.set(settlement.payer_id, payerBalance + amount);
+        
+        const receiverBalance = netBalances.get(settlement.receiver_id) || 0;
+        netBalances.set(settlement.receiver_id, receiverBalance - amount);
       }
 
       // Get profiles for all users
-      const userIds = Array.from(pairwiseBalances.keys());
-      
+      const userIds = Array.from(allUserIds);
       const profileMap = new Map<string, { name: string; avatar?: string }>();
       
       if (userIds.length > 0) {
@@ -164,24 +200,52 @@ export function useBalances() {
         }
       }
 
-      // Build results
+      // Build the balance map for simplification
+      const balanceMap = new Map<string, { balance: number; member: { id: string; name?: string; avatar?: string } }>();
+      
+      netBalances.forEach((balance, oderId) => {
+        const profile = profileMap.get(oderId) || { name: 'Unknown', avatar: undefined };
+        balanceMap.set(oderId, {
+          balance,
+          member: {
+            id: oderId,
+            name: profile.name,
+            avatar: profile.avatar,
+          },
+        });
+      });
+
+      // Use the same simplification algorithm as GroupDebtsCard
+      const simplifiedDebts = simplifyDebts(balanceMap);
+
+      // Filter to only debts that involve the current user
       const results: FriendBalance[] = [];
       
-      pairwiseBalances.forEach((amount, oderId) => {
-        const roundedAmount = Math.round(amount);
-        if (Math.abs(roundedAmount) > 0) {
-          const profile = profileMap.get(oderId) || { name: 'Unknown', avatar: undefined };
+      for (const debt of simplifiedDebts) {
+        if (debt.from.id === user.id) {
+          // Current user owes someone
           results.push({
-            oderId,
+            oderId: debt.to.id,
             user: {
-              id: oderId,
-              name: profile.name,
-              avatar: profile.avatar,
+              id: debt.to.id,
+              name: debt.to.name || 'Unknown',
+              avatar: debt.to.avatar,
             },
-            amount: roundedAmount,
+            amount: -debt.amount, // negative = you owe them
+          });
+        } else if (debt.to.id === user.id) {
+          // Someone owes current user
+          results.push({
+            oderId: debt.from.id,
+            user: {
+              id: debt.from.id,
+              name: debt.from.name || 'Unknown',
+              avatar: debt.from.avatar,
+            },
+            amount: debt.amount, // positive = they owe you
           });
         }
-      });
+      }
 
       return results;
     },
