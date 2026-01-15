@@ -166,34 +166,30 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 p-3 rounded-lg bg-muted/50"
+                className="p-3 rounded-lg bg-muted/50 space-y-2"
               >
-                {/* From person */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                {/* Debt info row */}
+                <div className="flex items-center gap-2">
+                  {/* From person */}
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage src={debt.from.avatar_url || undefined} />
                     <AvatarFallback className="text-xs">
                       {(debt.from.display_name || '?')[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium truncate">
-                    {debt.from.display_name?.split(' ')[0] || 'Unknown'}
-                  </span>
-                </div>
-
-                {/* Arrow and amount */}
-                <div className="flex items-center gap-1.5 flex-shrink-0 px-2">
-                  <span className="text-sm font-semibold text-negative">
-                    {formatCurrency(debt.amount)}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-
-                {/* To person */}
-                <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                  <span className="text-sm font-medium truncate">
-                    {debt.to.display_name?.split(' ')[0] || 'Unknown'}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">
+                      {debt.from.display_name || 'Unknown'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">owes</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="text-sm font-medium">
+                      {debt.to.display_name || 'Unknown'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">receives</p>
+                  </div>
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage src={debt.to.avatar_url || undefined} />
                     <AvatarFallback className="text-xs">
@@ -202,17 +198,21 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                   </Avatar>
                 </div>
 
-                {/* Settle button */}
-                {canSettle && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="ml-2 flex-shrink-0"
-                    onClick={() => setSettleDebt(debt)}
-                  >
-                    Settle
-                  </Button>
-                )}
+                {/* Amount and settle button row */}
+                <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                  <span className="text-base font-semibold text-negative">
+                    {formatCurrency(debt.amount)}
+                  </span>
+                  {canSettle && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSettleDebt(debt)}
+                    >
+                      Settle
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
