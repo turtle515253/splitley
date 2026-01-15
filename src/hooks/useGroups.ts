@@ -172,16 +172,16 @@ export function useGroup(groupId: string | undefined) {
             .eq('id', expense.paid_by)
             .maybeSingle();
 
-          // Fetch splits for this expense
+          // Fetch splits for this expense (including is_settled for debt calculations)
           const { data: splits } = await supabase
             .from('expense_splits')
-            .select('user_id, amount')
+            .select('user_id, amount, is_settled')
             .eq('expense_id', expense.id);
 
           return {
             ...expense,
             paidByProfile: profile,
-            splits: splits?.map(s => ({ user_id: s.user_id, amount: Number(s.amount) })) ?? [],
+            splits: splits?.map(s => ({ user_id: s.user_id, amount: Number(s.amount), is_settled: s.is_settled })) ?? [],
           };
         })
       );
