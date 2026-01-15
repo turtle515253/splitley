@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { GroupSettleDialog } from './GroupSettleDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroupSettlements, GroupSettlement } from '@/hooks/useGroupSettlements';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Member {
   user_id: string;
@@ -33,13 +35,23 @@ interface GroupDebtsCardProps {
   groupId: string;
 }
 
+interface Settlement {
+  payer_id: string;
+  receiver_id: string;
+  amount: number;
+}
+
 function calculateSimplifiedDebts(
   members: Member[], 
   expenses: Expense[],
-  settlements: GroupSettlement[]
+  groupSettlements: GroupSettlement[],
+  regularSettlements: Settlement[]
 ): SimplifiedDebt[] {
   // Calculate net balance for each member
   const balances: Record<string, number> = {};
+  
+  // Get member IDs for filtering
+  const memberIds = new Set(members.map(m => m.user_id));
   
   // Initialize all members with 0
   members.forEach(m => {
@@ -61,14 +73,27 @@ function calculateSimplifiedDebts(
     }
   }
 
-  // Apply settlements - when payer pays receiver, payer's balance increases (less in debt)
+  // Apply group settlements - when payer pays receiver, payer's balance increases (less in debt)
   // and receiver's balance decreases (received less)
-  for (const settlement of settlements) {
+  for (const settlement of groupSettlements) {
     if (balances[settlement.payer_id] !== undefined) {
       balances[settlement.payer_id] += Number(settlement.amount);
     }
     if (balances[settlement.receiver_id] !== undefined) {
       balances[settlement.receiver_id] -= Number(settlement.amount);
+    }
+  }
+
+  // Apply regular settlements (from Friend Balances) between group members
+  for (const settlement of regularSettlements) {
+    // Only apply if both parties are group members
+    if (memberIds.has(settlement.payer_id) && memberIds.has(settlement.receiver_id)) {
+      if (balances[settlement.payer_id] !== undefined) {
+        balances[settlement.payer_id] += Number(settlement.amount);
+      }
+      if (balances[settlement.receiver_id] !== undefined) {
+        balances[settlement.receiver_id] -= Number(settlement.amount);
+      }
     }
   }
 
@@ -122,9 +147,39 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
   const { user } = useAuth();
   const [settleDebt, setSettleDebt] = useState<SimplifiedDebt | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const { data: settlements = [] } = useGroupSettlements(groupId);
+  const { data: groupSettlements = [] } = useGroupSettlements(groupId);
+  
+  // Get member IDs for querying regular settlements
+  const memberIds = members.map(m => m.user_id);
+  
+  // Fetch regular settlements between group members
+  const { data: regularSettlements = [] } = useQuery({
+    queryKey: ['settlements-for-group', groupId, memberIds],
+    queryFn: async () => {
+      if (memberIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('settlements')
+        .select('payer_id, receiver_id, amount')
+        .or(
+          memberIds.map(id => `payer_id.eq.${id}`).join(',') + ',' +
+          memberIds.map(id => `receiver_id.eq.${id}`).join(',')
+        );
+      
+      if (error) {
+        console.error('Error fetching settlements:', error);
+        return [];
+      }
+      
+      // Filter to only settlements between group members
+      return (data || []).filter(
+        s => memberIds.includes(s.payer_id) && memberIds.includes(s.receiver_id)
+      );
+    },
+    enabled: memberIds.length > 0,
+  });
 
-  const simplifiedDebts = calculateSimplifiedDebts(members, expenses, settlements);
+  const simplifiedDebts = calculateSimplifiedDebts(members, expenses, groupSettlements, regularSettlements);
 
   if (expenses.length === 0) {
     return null;
