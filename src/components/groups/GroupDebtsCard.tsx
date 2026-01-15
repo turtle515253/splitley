@@ -169,7 +169,7 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                 className="p-3 rounded-lg bg-muted/50 space-y-2"
               >
                 {/* Debt info row */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {/* From person */}
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage src={debt.from.avatar_url || undefined} />
@@ -177,15 +177,15 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                       {(debt.from.display_name || '?')[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-sm font-medium truncate">
                       {debt.from.display_name || 'Unknown'}
                     </p>
                     <p className="text-xs text-muted-foreground">owes</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0 text-right">
-                    <p className="text-sm font-medium">
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mx-1" />
+                  <div className="flex-1 min-w-0 overflow-hidden text-right">
+                    <p className="text-sm font-medium truncate">
                       {debt.to.display_name || 'Unknown'}
                     </p>
                     <p className="text-xs text-muted-foreground">receives</p>
