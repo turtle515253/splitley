@@ -64,15 +64,23 @@ function calculateSimplifiedDebts(
   });
 
   // Calculate what each person paid vs what they owe from expenses
+  // Only consider unsettled splits to match useBalances.ts logic
   for (const expense of expenses) {
-    // Person who paid gets credit
+    const unsettledSplits = (expense.splits || []).filter(s => s.is_settled !== true);
+    
+    // Calculate total unsettled amount that others owe the payer
+    const totalUnsettled = unsettledSplits
+      .filter(s => s.user_id !== expense.paid_by)
+      .reduce((sum, s) => sum + Number(s.amount), 0);
+    
+    // Person who paid gets credit for what others still owe them
     if (balances[expense.paid_by] !== undefined) {
-      balances[expense.paid_by] += Number(expense.amount);
+      balances[expense.paid_by] += totalUnsettled;
     }
 
-    // Each person's share is their debt
-    for (const split of expense.splits || []) {
-      if (balances[split.user_id] !== undefined) {
+    // Each person's unsettled share is their debt (excluding the payer)
+    for (const split of unsettledSplits) {
+      if (split.user_id !== expense.paid_by && balances[split.user_id] !== undefined) {
         balances[split.user_id] -= Number(split.amount);
       }
     }
