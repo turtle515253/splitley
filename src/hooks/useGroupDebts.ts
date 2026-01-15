@@ -142,12 +142,12 @@ export function calculateDebtsFromData(
     balances[m.user_id] = 0;
   });
 
-  // Calculate from expenses - only unsettled splits
+  // Calculate from expenses - use ALL splits (settlements are tracked separately)
   for (const expense of expenses) {
-    const unsettledSplits = (expense.splits || []).filter(s => s.is_settled !== true);
+    const allSplits = expense.splits || [];
 
     // Calculate total that others owe the payer (excluding payer's own split)
-    const totalOwedToPayer = unsettledSplits
+    const totalOwedToPayer = allSplits
       .filter(s => s.user_id !== expense.paid_by)
       .reduce((sum, s) => sum + s.amount, 0);
 
@@ -156,8 +156,8 @@ export function calculateDebtsFromData(
       balances[expense.paid_by] += totalOwedToPayer;
     }
 
-    // Each person's unsettled share is their debt (excluding payer)
-    for (const split of unsettledSplits) {
+    // Each person's share is their debt (excluding payer)
+    for (const split of allSplits) {
       if (split.user_id !== expense.paid_by && balances[split.user_id] !== undefined) {
         balances[split.user_id] -= split.amount;
       }
