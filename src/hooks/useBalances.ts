@@ -244,6 +244,12 @@ export function useBalances() {
         }
       }
 
+      console.log('[useBalances] All debts from all groups:', allDebts.map(d => ({
+        from: d.fromName,
+        to: d.toName,
+        amount: d.amount
+      })));
+
       // Filter to only debts involving the current user
       const userDebts = new Map<string, FriendBalance>();
 
@@ -283,8 +289,10 @@ export function useBalances() {
         }
       }
 
+      const result = Array.from(userDebts.values()).filter(b => Math.abs(b.amount) >= 1);
+
       // Filter out zero balances and return
-      return Array.from(userDebts.values()).filter(b => Math.abs(b.amount) >= 1);
+      return result;
     },
     enabled: !!user,
   });
