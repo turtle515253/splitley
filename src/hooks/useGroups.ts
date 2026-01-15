@@ -32,7 +32,7 @@ export interface GroupWithDetails extends Group {
       display_name: string | null;
       avatar_url: string | null;
     } | null;
-    splits: { user_id: string; amount: number }[];
+    splits: { user_id: string; amount: number; is_settled?: boolean | null }[];
   }[];
 }
 
