@@ -1,183 +1,41 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { ArrowRight, Handshake, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { GroupSettleDialog } from './GroupSettleDialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGroupSettlements, GroupSettlement } from '@/hooks/useGroupSettlements';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { simplifyDebts, SimplifiedDebt as SharedSimplifiedDebt } from '@/lib/simplifyDebts';
-
-interface Member {
-  user_id: string;
-  display_name: string | null;
-  avatar_url: string | null;
-}
-
-interface Expense {
-  id: string;
-  amount: number;
-  paid_by: string;
-  splits?: { user_id: string; amount: number; is_settled?: boolean }[];
-}
-
-interface SimplifiedDebt {
-  from: Member;
-  to: Member;
-  amount: number;
-}
+import { useGroupDebts, SimplifiedGroupDebt } from '@/hooks/useGroupDebts';
 
 interface GroupDebtsCardProps {
-  members: Member[];
-  expenses: Expense[];
+  members: any[];
+  expenses: any[];
   groupId: string;
 }
 
-interface Settlement {
-  payer_id: string;
-  receiver_id: string;
-  amount: number;
-}
-
-/**
- * Calculate simplified debts for a group using the shared algorithm
- */
-function calculateSimplifiedDebts(
-  members: Member[], 
-  expenses: Expense[],
-  groupSettlements: GroupSettlement[],
-  regularSettlements: Settlement[]
-): SimplifiedDebt[] {
-  // Calculate net balance for each member
-  const balances: Record<string, number> = {};
-  
-  // Get member IDs for filtering
-  const memberIds = new Set(members.map(m => m.user_id));
-  
-  // Initialize all members with 0
-  members.forEach(m => {
-    balances[m.user_id] = 0;
-  });
-
-  // Calculate what each person paid vs what they owe from expenses
-  // Only consider unsettled splits to match useBalances.ts logic
-  for (const expense of expenses) {
-    const unsettledSplits = (expense.splits || []).filter(s => s.is_settled !== true);
-    
-    // Calculate total unsettled amount that others owe the payer
-    const totalUnsettled = unsettledSplits
-      .filter(s => s.user_id !== expense.paid_by)
-      .reduce((sum, s) => sum + Number(s.amount), 0);
-    
-    // Person who paid gets credit for what others still owe them
-    if (balances[expense.paid_by] !== undefined) {
-      balances[expense.paid_by] += totalUnsettled;
-    }
-
-    // Each person's unsettled share is their debt (excluding the payer)
-    for (const split of unsettledSplits) {
-      if (split.user_id !== expense.paid_by && balances[split.user_id] !== undefined) {
-        balances[split.user_id] -= Number(split.amount);
-      }
-    }
-  }
-
-  // Apply group settlements - when payer pays receiver, payer's balance increases (less in debt)
-  // and receiver's balance decreases (received less)
-  for (const settlement of groupSettlements) {
-    if (balances[settlement.payer_id] !== undefined) {
-      balances[settlement.payer_id] += Number(settlement.amount);
-    }
-    if (balances[settlement.receiver_id] !== undefined) {
-      balances[settlement.receiver_id] -= Number(settlement.amount);
-    }
-  }
-
-  // Apply regular settlements (from Friend Balances) between group members
-  for (const settlement of regularSettlements) {
-    // Only apply if both parties are group members
-    if (memberIds.has(settlement.payer_id) && memberIds.has(settlement.receiver_id)) {
-      if (balances[settlement.payer_id] !== undefined) {
-        balances[settlement.payer_id] += Number(settlement.amount);
-      }
-      if (balances[settlement.receiver_id] !== undefined) {
-        balances[settlement.receiver_id] -= Number(settlement.amount);
-      }
-    }
-  }
-
-  // Build the balance map for the shared simplification algorithm
-  const balanceMap = new Map<string, { balance: number; member: { id: string; name?: string; avatar?: string } }>();
-  
-  members.forEach(member => {
-    const balance = balances[member.user_id] || 0;
-    balanceMap.set(member.user_id, {
-      balance,
-      member: {
-        id: member.user_id,
-        name: member.display_name || undefined,
-        avatar: member.avatar_url || undefined,
-      },
-    });
-  });
-
-  // Use the shared simplification algorithm
-  const sharedDebts = simplifyDebts(balanceMap);
-
-  // Convert to the local SimplifiedDebt format
-  const memberMap = new Map(members.map(m => [m.user_id, m]));
-  
-  return sharedDebts.map(debt => ({
-    from: memberMap.get(debt.from.id) || { user_id: debt.from.id, display_name: debt.from.name || null, avatar_url: debt.from.avatar || null },
-    to: memberMap.get(debt.to.id) || { user_id: debt.to.id, display_name: debt.to.name || null, avatar_url: debt.to.avatar || null },
-    amount: debt.amount,
-  }));
-}
-
-export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardProps) {
+export function GroupDebtsCard({ groupId }: GroupDebtsCardProps) {
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
-  const [settleDebt, setSettleDebt] = useState<SimplifiedDebt | null>(null);
+  const [settleDebt, setSettleDebt] = useState<SimplifiedGroupDebt | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const { data: groupSettlements = [] } = useGroupSettlements(groupId);
   
-  // Get member IDs for querying regular settlements
-  const memberIds = members.map(m => m.user_id);
-  
-  // Fetch regular settlements between group members
-  const { data: regularSettlements = [] } = useQuery({
-    queryKey: ['settlements-for-group', groupId, memberIds],
-    queryFn: async () => {
-      if (memberIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from('settlements')
-        .select('payer_id, receiver_id, amount')
-        .or(
-          memberIds.map(id => `payer_id.eq.${id}`).join(',') + ',' +
-          memberIds.map(id => `receiver_id.eq.${id}`).join(',')
-        );
-      
-      if (error) {
-        console.error('Error fetching settlements:', error);
-        return [];
-      }
-      
-      // Filter to only settlements between group members
-      return (data || []).filter(
-        s => memberIds.includes(s.payer_id) && memberIds.includes(s.receiver_id)
-      );
-    },
-    enabled: memberIds.length > 0,
-  });
+  // Use the shared hook for consistent debt calculation
+  const { data: simplifiedDebts = [], isLoading } = useGroupDebts(groupId);
 
-  const simplifiedDebts = calculateSimplifiedDebts(members, expenses, groupSettlements, regularSettlements);
-
-  if (expenses.length === 0) {
-    return null;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Handshake className="h-4 w-4" />
+            Who Owes Whom
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground py-4">Loading...</div>
+        </CardContent>
+      </Card>
+    );
   }
 
   // All settled up
@@ -215,7 +73,6 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
         </CardHeader>
         <CardContent className="space-y-3">
           {simplifiedDebts.map((debt, index) => {
-            // User can settle if they are the one who owes
             const canSettle = user?.id === debt.from.user_id;
             const isExpanded = expandedIndex === index;
             
@@ -224,25 +81,20 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                 key={index}
                 className="p-3 rounded-lg bg-muted/50 space-y-2"
               >
-                {/* Debt info - tap to expand names */}
                 <div 
                   className="cursor-pointer"
                   onClick={() => toggleExpand(index)}
                 >
                   <div className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
-                      <p 
-                        className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}
-                      >
+                      <p className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}>
                         {debt.from.display_name || 'Unknown'}
                       </p>
                       <p className="text-xs text-muted-foreground">owes</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="flex-1 min-w-0 text-right">
-                      <p 
-                        className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}
-                      >
+                      <p className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}>
                         {debt.to.display_name || 'Unknown'}
                       </p>
                       <p className="text-xs text-muted-foreground">receives</p>
@@ -255,7 +107,6 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                   )}
                 </div>
 
-                {/* Amount and settle button row */}
                 <div className="flex items-center justify-between pt-1 border-t border-border/50">
                   <span className="text-base font-semibold text-negative">
                     {formatCurrency(debt.amount)}
@@ -282,7 +133,11 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
       <GroupSettleDialog
         open={!!settleDebt}
         onOpenChange={(open) => !open && setSettleDebt(null)}
-        debt={settleDebt}
+        debt={settleDebt ? {
+          from: { user_id: settleDebt.from.user_id, display_name: settleDebt.from.display_name, avatar_url: settleDebt.from.avatar_url },
+          to: { user_id: settleDebt.to.user_id, display_name: settleDebt.to.display_name, avatar_url: settleDebt.to.avatar_url },
+          amount: settleDebt.amount,
+        } : null}
         groupId={groupId}
       />
     </>
