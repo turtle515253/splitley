@@ -121,6 +121,7 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
   const [settleDebt, setSettleDebt] = useState<SimplifiedDebt | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const { data: settlements = [] } = useGroupSettlements(groupId);
 
   const simplifiedDebts = calculateSimplifiedDebts(members, expenses, settlements);
@@ -149,6 +150,10 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
     );
   }
 
+  const toggleExpand = (index: number) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
   return (
     <>
       <Card>
@@ -162,40 +167,42 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
           {simplifiedDebts.map((debt, index) => {
             // User can settle if they are the one who owes
             const canSettle = user?.id === debt.from.user_id;
+            const isExpanded = expandedIndex === index;
             
             return (
               <div
                 key={index}
                 className="p-3 rounded-lg bg-muted/50 space-y-2"
               >
-                {/* Debt info row */}
-                <div className="flex items-center gap-3">
-                  {/* From person */}
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={debt.from.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {(debt.from.display_name || '?')[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    <p className="text-sm font-medium truncate">
-                      {debt.from.display_name || 'Unknown'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">owes</p>
+                {/* Debt info - tap to expand names */}
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => toggleExpand(index)}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p 
+                        className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}
+                      >
+                        {debt.from.display_name || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">owes</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0 text-right">
+                      <p 
+                        className={`text-sm font-medium ${isExpanded ? 'whitespace-normal break-words' : 'truncate'}`}
+                      >
+                        {debt.to.display_name || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">receives</p>
+                    </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mx-1" />
-                  <div className="flex-1 min-w-0 overflow-hidden text-right">
-                    <p className="text-sm font-medium truncate">
-                      {debt.to.display_name || 'Unknown'}
+                  {!isExpanded && (
+                    <p className="text-[10px] text-muted-foreground text-center mt-1">
+                      Tap to see full names
                     </p>
-                    <p className="text-xs text-muted-foreground">receives</p>
-                  </div>
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={debt.to.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {(debt.to.display_name || '?')[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  )}
                 </div>
 
                 {/* Amount and settle button row */}
@@ -207,7 +214,10 @@ export function GroupDebtsCard({ members, expenses, groupId }: GroupDebtsCardPro
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setSettleDebt(debt)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSettleDebt(debt);
+                      }}
                     >
                       Settle
                     </Button>
