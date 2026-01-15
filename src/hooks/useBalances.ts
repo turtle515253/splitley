@@ -11,147 +11,6 @@ export interface FriendBalance {
   };
   amount: number; // positive = they owe you (simplified), negative = you owe them (simplified)
 }
-
-interface UserNetBalance {
-  id: string;
-  name: string;
-  avatar?: string;
-  netBalance: number; // total paid - total share (positive = creditor, negative = debtor)
-}
-
-/**
- * Splitwise-style debt simplification algorithm with full settlement priority
- * Goal: Each person pays/receives from as few people as possible
- * Strategy: Try to match each debtor with a single creditor when possible
- */
-function simplifyDebts(
-  userNetBalances: Map<string, UserNetBalance>,
-  currentUserId: string
-): FriendBalance[] {
-  const results: FriendBalance[] = [];
-  
-  // Separate creditors and debtors
-  const creditors: { id: string; amount: number; name: string; avatar?: string }[] = [];
-  const debtors: { id: string; amount: number; name: string; avatar?: string }[] = [];
-  
-  userNetBalances.forEach((balance) => {
-    if (balance.netBalance > 0.01) {
-      creditors.push({ 
-        id: balance.id, 
-        amount: balance.netBalance,
-        name: balance.name,
-        avatar: balance.avatar
-      });
-    } else if (balance.netBalance < -0.01) {
-      debtors.push({ 
-        id: balance.id, 
-        amount: Math.abs(balance.netBalance),
-        name: balance.name,
-        avatar: balance.avatar
-      });
-    }
-  });
-  
-  // Sort creditors by amount descending (largest first)
-  // Sort debtors by amount descending (largest first)
-  creditors.sort((a, b) => b.amount - a.amount);
-  debtors.sort((a, b) => b.amount - a.amount);
-  
-  const transactions: { from: typeof debtors[0]; to: typeof creditors[0]; amount: number }[] = [];
-  
-  // Phase 1: Try to find exact matches (debtor amount = creditor amount)
-  for (let d = 0; d < debtors.length; d++) {
-    if (debtors[d].amount < 0.01) continue;
-    
-    for (let c = 0; c < creditors.length; c++) {
-      if (creditors[c].amount < 0.01) continue;
-      
-      // Check for exact or near-exact match
-      if (Math.abs(debtors[d].amount - creditors[c].amount) < 0.01) {
-        transactions.push({
-          from: { ...debtors[d] },
-          to: { ...creditors[c] },
-          amount: debtors[d].amount
-        });
-        creditors[c].amount = 0;
-        debtors[d].amount = 0;
-        break;
-      }
-    }
-  }
-  
-  // Phase 2: Match remaining debtors to creditors
-  // Strategy: Each debtor pays to the largest available creditor(s)
-  // This consolidates payments - debtor pays fewer people
-  for (const debtor of debtors) {
-    if (debtor.amount < 0.01) continue;
-    
-    // Find creditors who can absorb this debtor's full amount
-    // Prefer single creditor over multiple
-    let bestSingleCreditor = creditors.find(c => c.amount >= debtor.amount - 0.01 && c.amount > 0);
-    
-    if (bestSingleCreditor) {
-      // Debtor pays full amount to single creditor
-      transactions.push({
-        from: { ...debtor },
-        to: { ...bestSingleCreditor },
-        amount: debtor.amount
-      });
-      bestSingleCreditor.amount -= debtor.amount;
-      debtor.amount = 0;
-    } else {
-      // Must split across multiple creditors
-      // Pay to largest creditors first
-      for (const creditor of creditors) {
-        if (debtor.amount < 0.01) break;
-        if (creditor.amount < 0.01) continue;
-        
-        const transferAmount = Math.min(creditor.amount, debtor.amount);
-        
-        transactions.push({
-          from: { ...debtor },
-          to: { ...creditor },
-          amount: transferAmount
-        });
-        
-        creditor.amount -= transferAmount;
-        debtor.amount -= transferAmount;
-      }
-    }
-  }
-  
-  // Filter transactions involving the current user
-  for (const tx of transactions) {
-    if (tx.amount < 0.01) continue;
-    
-    if (tx.from.id === currentUserId) {
-      // Current user owes tx.to
-      results.push({
-        oderId: tx.to.id,
-        user: {
-          id: tx.to.id,
-          name: tx.to.name,
-          avatar: tx.to.avatar,
-        },
-        amount: -tx.amount, // negative = you owe them
-      });
-    } else if (tx.to.id === currentUserId) {
-      // tx.from owes current user
-      results.push({
-        oderId: tx.from.id,
-        user: {
-          id: tx.from.id,
-          name: tx.from.name,
-          avatar: tx.from.avatar,
-        },
-        amount: tx.amount, // positive = they owe you
-      });
-    }
-  }
-  
-  return results;
-}
-
 export function useBalances() {
   const { user } = useAuth();
 
@@ -168,7 +27,7 @@ export function useBalances() {
 
       const groupIds = userGroups?.map(g => g.group_id) || [];
 
-      // Get all expenses from these groups (including non-group expenses where user is involved)
+      // Get all expenses from these groups
       const { data: groupExpenses } = await supabase
         .from('expenses')
         .select(`
@@ -237,88 +96,57 @@ export function useBalances() {
         }
       }
 
-      // Get settlements between users
+      // Get settlements between current user and others
       const { data: settlements } = await supabase
         .from('settlements')
         .select('id, payer_id, receiver_id, amount')
         .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`);
 
-      // Calculate net balance for each user: total_paid - total_share
-      // Only consider unsettled splits
-      const userNetBalances = new Map<string, UserNetBalance>();
-      
-      // Initialize current user
-      userNetBalances.set(user.id, {
-        id: user.id,
-        name: 'You',
-        avatar: undefined,
-        netBalance: 0,
-      });
+      // Calculate PAIRWISE balances: what each friend owes YOU directly
+      // Positive = they owe you, Negative = you owe them
+      const pairwiseBalances = new Map<string, number>();
 
       for (const expense of allExpenses.values()) {
         const splits = expense.expense_splits || [];
         const unsettledSplits = splits.filter((s: any) => s.is_settled !== true);
         
-        // Add what the payer paid
-        const payer = userNetBalances.get(expense.paid_by) || {
-          id: expense.paid_by,
-          name: '',
-          avatar: undefined,
-          netBalance: 0,
-        };
-        
-        // Payer's contribution = sum of unsettled splits (what others owe)
-        const totalUnsettled = unsettledSplits
-          .filter((s: any) => s.user_id !== expense.paid_by)
-          .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
-        
-        payer.netBalance += totalUnsettled;
-        userNetBalances.set(expense.paid_by, payer);
-        
-        // Subtract each person's share
-        for (const split of unsettledSplits) {
-          if (split.user_id !== expense.paid_by) {
-            const splitUser = userNetBalances.get(split.user_id) || {
-              id: split.user_id,
-              name: '',
-              avatar: undefined,
-              netBalance: 0,
-            };
-            splitUser.netBalance -= Number(split.amount);
-            userNetBalances.set(split.user_id, splitUser);
+        if (expense.paid_by === user.id) {
+          // Current user paid - each person's unsettled split amount is what they owe you
+          for (const split of unsettledSplits) {
+            if (split.user_id !== user.id) {
+              const current = pairwiseBalances.get(split.user_id) || 0;
+              pairwiseBalances.set(split.user_id, current + Number(split.amount));
+            }
+          }
+        } else {
+          // Someone else paid - find current user's unsettled split (what you owe them)
+          const myUnsettledSplit = unsettledSplits.find((s: any) => s.user_id === user.id);
+          if (myUnsettledSplit) {
+            const current = pairwiseBalances.get(expense.paid_by) || 0;
+            pairwiseBalances.set(expense.paid_by, current - Number(myUnsettledSplit.amount));
           }
         }
       }
 
-      // Apply settlements to net balances
+      // Apply settlements
       for (const settlement of settlements || []) {
-        const payerId = settlement.payer_id;
-        const receiverId = settlement.receiver_id;
         const amount = Number(settlement.amount);
 
-        // Payer's balance increases (they paid, so they're owed less or owe more credit)
-        const payerBalance = userNetBalances.get(payerId) || {
-          id: payerId,
-          name: '',
-          avatar: undefined,
-          netBalance: 0,
-        };
-        payerBalance.netBalance += amount;
-        userNetBalances.set(payerId, payerBalance);
-
-        // Receiver's balance decreases (they received money, so they're owed more or owe less)
-        const receiverBalance = userNetBalances.get(receiverId) || {
-          id: receiverId,
-          name: '',
-          avatar: undefined,
-          netBalance: 0,
-        };
-        receiverBalance.netBalance -= amount;
-        userNetBalances.set(receiverId, receiverBalance);
+        if (settlement.payer_id === user.id) {
+          // Current user paid someone - reduce what you owe them (or increase what they owe you)
+          const current = pairwiseBalances.get(settlement.receiver_id) || 0;
+          pairwiseBalances.set(settlement.receiver_id, current + amount);
+        } else if (settlement.receiver_id === user.id) {
+          // Someone paid current user - reduce what they owe you
+          const current = pairwiseBalances.get(settlement.payer_id) || 0;
+          pairwiseBalances.set(settlement.payer_id, current - amount);
+        }
       }
 
       // Get profiles for all users
-      const userIds = Array.from(userNetBalances.keys()).filter(id => id !== user.id);
+      const userIds = Array.from(pairwiseBalances.keys());
+      
+      const profileMap = new Map<string, { name: string; avatar?: string }>();
       
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -328,31 +156,34 @@ export function useBalances() {
 
         if (profiles) {
           for (const profile of profiles) {
-            const balance = userNetBalances.get(profile.id);
-            if (balance) {
-              balance.name = profile.display_name || 'Unknown';
-              balance.avatar = profile.avatar_url || undefined;
-            }
+            profileMap.set(profile.id!, {
+              name: profile.display_name || 'Unknown',
+              avatar: profile.avatar_url || undefined,
+            });
           }
         }
       }
 
-      // Remove current user from the map before simplification (we'll add back via transactions)
-      const currentUserBalance = userNetBalances.get(user.id);
-      userNetBalances.delete(user.id);
+      // Build results
+      const results: FriendBalance[] = [];
       
-      // Re-add current user for debt simplification
-      if (currentUserBalance) {
-        userNetBalances.set(user.id, currentUserBalance);
-      }
+      pairwiseBalances.forEach((amount, oderId) => {
+        const roundedAmount = Math.round(amount);
+        if (Math.abs(roundedAmount) > 0) {
+          const profile = profileMap.get(oderId) || { name: 'Unknown', avatar: undefined };
+          results.push({
+            oderId,
+            user: {
+              id: oderId,
+              name: profile.name,
+              avatar: profile.avatar,
+            },
+            amount: roundedAmount,
+          });
+        }
+      });
 
-      // Apply debt simplification algorithm
-      const simplifiedBalances = simplifyDebts(userNetBalances, user.id);
-
-      // Round off all amounts and filter out zero balances
-      return simplifiedBalances
-        .map(b => ({ ...b, amount: Math.round(b.amount) }))
-        .filter(b => Math.abs(b.amount) > 0);
+      return results;
     },
     enabled: !!user,
   });
