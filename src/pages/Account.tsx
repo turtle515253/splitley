@@ -164,143 +164,139 @@ const Account = () => {
             </Card>
           </div>
 
-        {/* Edit Profile Dialog */}
-        <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
-
-        {/* Invite Friends Dialog */}
-        <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
-
-        {/* Delete Account Dialog */}
-        <DeleteAccountDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount} />
-
-        {/* Currency Selector Modal */}
-        {showCurrencySelector && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Select Currency</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setShowCurrencySelector(false)}
+          {/* Menu Items */}
+          <div className="px-5 pb-8">
+            <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <CardContent className="p-2">
+                {menuItems.map((item, index) => (
+                  <button
+                    key={item.label}
+                    onClick={() => handleMenuClick(item.action)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 text-left",
+                      index !== menuItems.length - 1 && "border-b border-border/50"
+                    )}
                   >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="max-h-[60vh] overflow-y-auto">
-                  <CurrencySelector onClose={() => setShowCurrencySelector(false)} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+                    <div className="p-2 rounded-lg bg-accent">
+                      <item.icon className="h-4 w-4 text-accent-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getSubtitle(item)}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
 
-        {/* Appearance Selector Modal */}
-        {showAppearanceSelector && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Appearance</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setShowAppearanceSelector(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="max-h-[70vh] overflow-y-auto pb-6">
-                  <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            {/* Logout Button */}
+            <Button 
+              variant="outline" 
+              className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4 mr-2" />
+              )}
+              Log Out
+            </Button>
 
-        {/* Notifications Selector Modal */}
-        {showNotificationsSelector && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-            <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Notifications</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setShowNotificationsSelector(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="max-h-[70vh] overflow-y-auto pb-6">
-                  <NotificationsSelector onClose={() => setShowNotificationsSelector(false)} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            {/* Delete Account Button */}
+            <Button 
+              variant="ghost" 
+              className="w-full mt-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setShowDeleteAccount(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </Button>
 
-        {/* Menu Items */}
-        <div className="px-5 pb-8">
-          <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <CardContent className="p-2">
-              {menuItems.map((item, index) => (
-                <button
-                  key={item.label}
-                  onClick={() => handleMenuClick(item.action)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 text-left",
-                    index !== menuItems.length - 1 && "border-b border-border/50"
-                  )}
-                >
-                  <div className="p-2 rounded-lg bg-accent">
-                    <item.icon className="h-4 w-4 text-accent-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getSubtitle(item)}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Logout Button */}
-          <Button 
-            variant="outline" 
-            className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <LogOut className="h-4 w-4 mr-2" />
-            )}
-            Log Out
-          </Button>
-
-          {/* Delete Account Button */}
-          <Button 
-            variant="ghost" 
-            className="w-full mt-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setShowDeleteAccount(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Account
-          </Button>
-
-          <p className="text-xs text-center text-muted-foreground mt-6">
-            Splitley v1.0.0
-          </p>
+            <p className="text-xs text-center text-muted-foreground mt-6">
+              Splitley v1.0.0
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Dialogs - moved OUTSIDE the scroll container */}
+      <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
+      <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
+      <DeleteAccountDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount} />
+
+      {/* Currency Selector Modal */}
+      {showCurrencySelector && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Select Currency</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowCurrencySelector(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <CurrencySelector onClose={() => setShowCurrencySelector(false)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appearance Selector Modal */}
+      {showAppearanceSelector && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Appearance</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowAppearanceSelector(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto pb-6">
+                <AppearanceSelector onClose={() => setShowAppearanceSelector(false)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Selector Modal */}
+      {showNotificationsSelector && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Notifications</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowNotificationsSelector(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto pb-6">
+                <NotificationsSelector onClose={() => setShowNotificationsSelector(false)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 };
