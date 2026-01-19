@@ -47,8 +47,12 @@ const App = () => (
       persister,
       // Keep cache for 7 days
       maxAge: 1000 * 60 * 60 * 24 * 7,
-      // Don't block rendering while restoring cache
       buster: 'v1',
+    }}
+    // Critical: Don't block rendering while restoring cache
+    onSuccess={() => {
+      // Resume any paused mutations after cache restore
+      queryClient.resumePausedMutations();
     }}
   >
     <ThemeProvider>
