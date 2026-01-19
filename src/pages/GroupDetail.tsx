@@ -53,31 +53,31 @@ const GroupDetail = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <AppLayout.Header>
-          <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1 flex items-center gap-2">
-              <Skeleton className="h-8 w-8 rounded" />
-              <Skeleton className="h-6 w-32" />
-            </div>
-            <Skeleton className="h-9 w-9 rounded-md" />
-          </div>
-          <Card className="bg-primary/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-28" />
-                </div>
-                <Skeleton className="h-9 w-28 rounded-md" />
+        <div className="safe-top">
+          <header className="px-5 pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded" />
+                <Skeleton className="h-6 w-32" />
               </div>
-            </CardContent>
-          </Card>
-        </AppLayout.Header>
-        <AppLayout.Content className="px-5">
-          <div className="mb-6 pt-4">
+              <Skeleton className="h-9 w-9 rounded-md" />
+            </div>
+            <Card className="bg-primary/10 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-28" />
+                  </div>
+                  <Skeleton className="h-9 w-28 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          </header>
+          <div className="px-5 mb-6">
             <Skeleton className="h-4 w-24 mb-3" />
             <div className="flex gap-3">
               {[...Array(4)].map((_, i) => (
@@ -88,7 +88,7 @@ const GroupDetail = () => {
               ))}
             </div>
           </div>
-          <div>
+          <div className="px-5 pb-8">
             <Skeleton className="h-4 w-16 mb-3" />
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
@@ -109,7 +109,7 @@ const GroupDetail = () => {
               ))}
             </div>
           </div>
-        </AppLayout.Content>
+        </div>
       </AppLayout>
     );
   }
@@ -117,61 +117,61 @@ const GroupDetail = () => {
   if (!group) {
     return (
       <AppLayout>
-        <AppLayout.Header>
+        <div className="safe-top px-5 pt-6">
           <Button variant="ghost" onClick={() => navigate('/groups')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Groups
           </Button>
-        </AppLayout.Header>
-        <AppLayout.Content>
           <div className="text-center mt-12">
             <h2 className="text-xl font-semibold">Group not found</h2>
           </div>
-        </AppLayout.Content>
+        </div>
       </AppLayout>
     );
   }
   
   return (
     <AppLayout>
-      <AppLayout.Header>
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{group.emoji || '👥'}</span>
-              <h1 className="text-xl font-bold">{group.name}</h1>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        {/* Group Stats */}
-        <Card className="bg-primary/10 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Expenses</p>
-                <p className="text-2xl font-bold">{formatCurrency(group.totalExpenses)}</p>
+      <div className="safe-top bg-background">
+        {/* Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{group.emoji || '👥'}</span>
+                <h1 className="text-xl font-bold">{group.name}</h1>
               </div>
-              <Button size="sm" onClick={() => navigate(`/add-expense?groupId=${groupId}`)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Expense
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-        <div className="mt-4 border-b border-border" />
-      </AppLayout.Header>
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* Group Stats */}
+          <Card className="bg-primary/10 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Expenses</p>
+                  <p className="text-2xl font-bold">{formatCurrency(group.totalExpenses)}</p>
+                </div>
+                <Button size="sm" onClick={() => navigate(`/add-expense?groupId=${groupId}`)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Expense
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="mt-4 border-b border-border" />
+        </header>
 
-      <AppLayout.Content className="px-5">
-        <div className="pt-4">
+        {/* Content */}
+        <div className="px-5 pb-8">
           {/* Members */}
-          <div className="mb-6">
+          <div className="mb-6 pt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-muted-foreground">
                 Members ({group.members.length})
@@ -282,7 +282,6 @@ const GroupDetail = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
-                          {/* Expense payer or group creator can manage expenses */}
                           {(expense.paid_by === user?.id || isCreator) && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -334,7 +333,7 @@ const GroupDetail = () => {
             </div>
           </div>
         </div>
-      </AppLayout.Content>
+      </div>
       
       <AddMemberDialog
         open={showAddMemberDialog}
