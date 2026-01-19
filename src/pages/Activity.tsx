@@ -120,9 +120,9 @@ const Activity = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Sticky Header */}
-        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
+      <div className="safe-top bg-background">
+        {/* Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
           <h1 className="text-2xl font-bold">Activity</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Track expenses and payments

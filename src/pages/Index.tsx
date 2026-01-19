@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 const Index = () => {
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Sticky Header */}
-        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
+      <div className="safe-top bg-background">
+        {/* Fixed Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <Button variant="ghost" size="icon" className="relative">

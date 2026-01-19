@@ -132,9 +132,9 @@ const GroupDetail = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Sticky Header */}
-        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
+      <div className="safe-top bg-background">
+        {/* Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
           <div className="flex items-center gap-3 mb-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
               <ArrowLeft className="h-5 w-5" />
