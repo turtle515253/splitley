@@ -41,6 +41,8 @@ export function useGroups() {
 
   return useQuery({
     queryKey: ['groups', user?.id],
+    // Use previous data as placeholder while fetching
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (!user) return [];
 
@@ -119,6 +121,8 @@ export function useGroup(groupId: string | undefined) {
 
   return useQuery({
     queryKey: ['group', groupId],
+    // Use previous data as placeholder while fetching
+    placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<GroupWithDetails | null> => {
       if (!groupId || !user) return null;
 
