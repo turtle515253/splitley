@@ -141,18 +141,15 @@
   html {
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
-    /* Smooth scrolling */
-    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    /* Enable hardware acceleration for smoother scrolling */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Prevent overscroll bounce that causes jitter */
-    overscroll-behavior-y: none;
+    /* Prevent overscroll bounce */
+    overscroll-behavior-y: contain;
   }
 }
 
