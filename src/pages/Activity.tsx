@@ -120,18 +120,16 @@ const Activity = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <h1 className="text-2xl font-bold">Activity</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track expenses and payments
-          </p>
-          <div className="mt-4 border-b border-border" />
-        </header>
+      <AppLayout.Header>
+        <h1 className="text-2xl font-bold">Activity</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Track expenses and payments
+        </p>
+        <div className="mt-4 border-b border-border" />
+      </AppLayout.Header>
 
-        {/* Content */}
-        <div className="px-5 pb-8 pt-4">
+      <AppLayout.Content className="px-5">
+        <div className="pt-4">
           <Tabs defaultValue="activity" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="activity">All Activity</TabsTrigger>
@@ -352,7 +350,7 @@ const Activity = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
+      </AppLayout.Content>
       
       <DeleteExpenseDialog
         open={!!expenseToDelete}
