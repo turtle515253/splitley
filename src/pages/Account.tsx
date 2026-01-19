@@ -27,7 +27,8 @@ import {
   Share,
   Coins,
   X,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -42,8 +43,6 @@ const menuItems = [
   { icon: Share, label: 'Invite Friends', subtitle: 'Earn rewards', action: 'invite' },
   { icon: HelpCircle, label: 'Help & Support', subtitle: 'Get assistance', action: 'help' },
 ];
-
-import { Trash2 } from 'lucide-react';
 
 const Account = () => {
   const { profile, logout, isLoading } = useAuth();
@@ -127,102 +126,96 @@ const Account = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Account</h1>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="mt-4 border-b border-border" />
-        </header>
+      <AppLayout.Header>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Account</h1>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="mt-4 border-b border-border" />
+      </AppLayout.Header>
 
-        {/* Content */}
-        <div>
+      <AppLayout.Content className="px-5">
+        <div className="pt-4">
           {/* Profile Card */}
-          <div className="px-5 mb-5 pt-4">
-            <Card className="animate-fade-in">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16 ring-4 ring-primary/20">
-                    <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold">{profile?.display_name || 'User'}</h2>
-                    <p className="text-sm text-muted-foreground">{profile?.email}</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
-                    Edit
-                  </Button>
+          <Card className="animate-fade-in mb-5">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 ring-4 ring-primary/20">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold">{profile?.display_name || 'User'}</h2>
+                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
+                  Edit
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Menu Items */}
-          <div className="px-5 pb-8">
-            <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <CardContent className="p-2">
-                {menuItems.map((item, index) => (
-                  <button
-                    key={item.label}
-                    onClick={() => handleMenuClick(item.action)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 text-left",
-                      index !== menuItems.length - 1 && "border-b border-border/50"
-                    )}
-                  >
-                    <div className="p-2 rounded-lg bg-accent">
-                      <item.icon className="h-4 w-4 text-accent-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {getSubtitle(item)}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
+          <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <CardContent className="p-2">
+              {menuItems.map((item, index) => (
+                <button
+                  key={item.label}
+                  onClick={() => handleMenuClick(item.action)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-accent/50 text-left",
+                    index !== menuItems.length - 1 && "border-b border-border/50"
+                  )}
+                >
+                  <div className="p-2 rounded-lg bg-accent">
+                    <item.icon className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getSubtitle(item)}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
 
-            {/* Logout Button */}
-            <Button 
-              variant="outline" 
-              className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <LogOut className="h-4 w-4 mr-2" />
-              )}
-              Log Out
-            </Button>
+          {/* Logout Button */}
+          <Button 
+            variant="outline" 
+            className="w-full mt-5 text-negative border-negative/20 hover:bg-negative/5 hover:text-negative"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4 mr-2" />
+            )}
+            Log Out
+          </Button>
 
-            {/* Delete Account Button */}
-            <Button 
-              variant="ghost" 
-              className="w-full mt-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => setShowDeleteAccount(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Account
-            </Button>
+          {/* Delete Account Button */}
+          <Button 
+            variant="ghost" 
+            className="w-full mt-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setShowDeleteAccount(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Account
+          </Button>
 
-            <p className="text-xs text-center text-muted-foreground mt-6">
-              Splitley v1.0.0
-            </p>
-          </div>
+          <p className="text-xs text-center text-muted-foreground mt-6">
+            Splitley v1.0.0
+          </p>
         </div>
-      </div>
+      </AppLayout.Content>
 
       {/* Dialogs - moved OUTSIDE the scroll container */}
       <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />

@@ -141,10 +141,25 @@
   html {
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
+    /* Prevent elastic scrolling on the html/body level */
+    overflow: hidden;
+    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* Prevent body scroll - only allow scroll in designated containers */
+    overflow: hidden;
+    height: 100%;
+    position: fixed;
+    width: 100%;
+    /* Prevent pull-to-refresh on mobile browsers */
+    overscroll-behavior: none;
+  }
+
+  #root {
+    height: 100%;
+    overflow: hidden;
   }
 }
 
