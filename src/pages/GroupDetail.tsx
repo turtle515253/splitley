@@ -132,9 +132,9 @@ const GroupDetail = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Header */}
-        <header className="px-5 pt-6 pb-4">
+      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center gap-3 mb-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
               <ArrowLeft className="h-5 w-5" />
@@ -165,7 +165,11 @@ const GroupDetail = () => {
               </div>
             </CardContent>
           </Card>
+          <div className="mt-4 border-b border-border" />
         </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
 
         {/* Members */}
         <div className="px-5 mb-6">
@@ -329,6 +333,7 @@ const GroupDetail = () => {
               </Card>
             )}
           </div>
+        </div>
         </div>
       </div>
       
