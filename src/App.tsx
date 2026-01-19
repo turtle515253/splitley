@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SpaRedirector from "@/components/SpaRedirector";
 import Index from "./pages/Index";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
@@ -14,6 +15,7 @@ import Activity from "./pages/Activity";
 import Account from "./pages/Account";
 import AddExpense from "./pages/AddExpense";
 import Auth from "./pages/Auth";
+import NativeCallback from "./pages/NativeCallback";
 import FriendDetail from "./pages/FriendDetail";
 import NotFound from "./pages/NotFound";
 
@@ -28,8 +30,10 @@ const App = () => (
             <Toaster />
             <Sonner position="top-center" />
             <BrowserRouter>
+              <SpaRedirector />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/native-callback" element={<NativeCallback />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
