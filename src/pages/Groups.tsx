@@ -24,9 +24,9 @@ const Groups = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Header */}
-        <header className="px-5 pt-6 pb-4">
+      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Groups</h1>
             <Button size="sm" onClick={() => setShowNewGroupDialog(true)}>
@@ -34,7 +34,11 @@ const Groups = () => {
               New Group
             </Button>
           </div>
+          <div className="mt-4 border-b border-border" />
         </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
 
         {/* Loading State */}
         {isLoading && (
@@ -71,9 +75,9 @@ const Groups = () => {
           </div>
         )}
 
-        {/* Groups List */}
-        {!isLoading && (
-          <div className="px-5 space-y-3 pb-8">
+          {/* Groups List */}
+          {!isLoading && (
+            <div className="px-5 space-y-3 pb-8 pt-4">
             {groups.map((group, index) => (
               <Card 
                 key={group.id} 
@@ -138,8 +142,9 @@ const Groups = () => {
                 </CardContent>
               </Card>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
       
       <NewGroupDialog 
