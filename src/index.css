@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font loaded via link in index.html for better performance */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -155,22 +155,37 @@
     text-wrap: balance;
   }
 
+  /* Optimized animations - use GPU-accelerated properties only */
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
+    will-change: opacity;
   }
 
   .animate-slide-up {
     animation: slideUp 0.3s ease-out forwards;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
   .animate-scale-in {
     animation: scaleIn 0.2s ease-out forwards;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
   .animate-bounce-subtle {
     animation: bounceSlight 0.4s ease-out;
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -180,6 +195,7 @@
   }
 }
 
+/* GPU-accelerated keyframe animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -188,26 +204,26 @@
 @keyframes slideUp {
   from { 
     opacity: 0; 
-    transform: translateY(12px); 
+    transform: translate3d(0, 12px, 0); 
   }
   to { 
     opacity: 1; 
-    transform: translateY(0); 
+    transform: translate3d(0, 0, 0); 
   }
 }
 
 @keyframes scaleIn {
   from { 
     opacity: 0; 
-    transform: scale(0.97); 
+    transform: scale3d(0.97, 0.97, 1); 
   }
   to { 
     opacity: 1; 
-    transform: scale(1); 
+    transform: scale3d(1, 1, 1); 
   }
 }
 
 @keyframes bounceSlight {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -3px, 0); }
 }
