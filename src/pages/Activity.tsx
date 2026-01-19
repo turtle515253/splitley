@@ -89,7 +89,6 @@ const Activity = () => {
   // Calculate payment summary
   const paymentSummary = settlements.reduce(
     (acc, settlement) => {
-      // Check if current user paid (payerName is "You")
       if (settlement.payerName === 'You') {
         acc.totalPaid += settlement.amount;
       } else {
@@ -120,16 +119,18 @@ const Activity = () => {
 
   return (
     <AppLayout>
-      <AppLayout.Header>
-        <h1 className="text-2xl font-bold">Activity</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Track expenses and payments
-        </p>
-        <div className="mt-4 border-b border-border" />
-      </AppLayout.Header>
+      <div className="safe-top bg-background">
+        {/* Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
+          <h1 className="text-2xl font-bold">Activity</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Track expenses and payments
+          </p>
+          <div className="mt-4 border-b border-border" />
+        </header>
 
-      <AppLayout.Content className="px-5">
-        <div className="pt-4">
+        {/* Content */}
+        <div className="px-5 pb-8 pt-4">
           <Tabs defaultValue="activity" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="activity">All Activity</TabsTrigger>
@@ -150,7 +151,6 @@ const Activity = () => {
                     <Card>
                       <CardContent className="p-2">
                         {items.map((activity, index) => {
-                          // Get category icon for expenses
                           const category = activity.category || 'general';
                           const CategoryIcon = activity.type === 'expense_added' 
                             ? (categoryIcons[category] || categoryIcons.general)
@@ -350,7 +350,7 @@ const Activity = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </AppLayout.Content>
+      </div>
       
       <DeleteExpenseDialog
         open={!!expenseToDelete}

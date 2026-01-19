@@ -126,18 +126,20 @@ const Account = () => {
 
   return (
     <AppLayout>
-      <AppLayout.Header>
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Account</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="mt-4 border-b border-border" />
-      </AppLayout.Header>
+      <div className="safe-top bg-background">
+        {/* Header */}
+        <header className="bg-background px-5 pt-6 pb-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Account</h1>
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="mt-4 border-b border-border" />
+        </header>
 
-      <AppLayout.Content className="px-5">
-        <div className="pt-4">
+        {/* Content */}
+        <div className="px-5 pb-8 pt-4">
           {/* Profile Card */}
           <Card className="animate-fade-in mb-5">
             <CardContent className="p-5">
@@ -215,9 +217,9 @@ const Account = () => {
             Splitley v1.0.0
           </p>
         </div>
-      </AppLayout.Content>
+      </div>
 
-      {/* Dialogs - moved OUTSIDE the scroll container */}
+      {/* Dialogs */}
       <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
       <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
       <DeleteAccountDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount} />

@@ -27,16 +27,16 @@ export default function FriendDetail() {
   if (isLoading) {
     return (
       <AppLayout>
-        <AppLayout.Header>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-semibold">Friend Details</h1>
-          </div>
-        </AppLayout.Header>
-        <AppLayout.Content className="px-4">
-          <div className="pt-4 space-y-4">
+        <div className="safe-top bg-background">
+          <header className="bg-background px-5 pt-6 pb-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Friend Details</h1>
+            </div>
+          </header>
+          <div className="px-4 pt-4 space-y-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center">
@@ -48,7 +48,7 @@ export default function FriendDetail() {
               </CardContent>
             </Card>
           </div>
-        </AppLayout.Content>
+        </div>
       </AppLayout>
     );
   }
@@ -56,16 +56,16 @@ export default function FriendDetail() {
   if (!balance) {
     return (
       <AppLayout>
-        <AppLayout.Header>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-semibold">Friend Details</h1>
-          </div>
-        </AppLayout.Header>
-        <AppLayout.Content className="px-4">
-          <div className="pt-4">
+        <div className="safe-top bg-background">
+          <header className="bg-background px-5 pt-6 pb-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Friend Details</h1>
+            </div>
+          </header>
+          <div className="px-4 pt-4">
             <p className="text-center text-muted-foreground mt-8">
               No balance found with this friend. You may have already settled up!
             </p>
@@ -77,7 +77,7 @@ export default function FriendDetail() {
               Go Back
             </Button>
           </div>
-        </AppLayout.Content>
+        </div>
       </AppLayout>
     );
   }
@@ -91,17 +91,17 @@ export default function FriendDetail() {
 
   return (
     <AppLayout>
-      <AppLayout.Header>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Friend Details</h1>
-        </div>
-      </AppLayout.Header>
+      <div className="safe-top bg-background">
+        <header className="bg-background px-5 pt-6 pb-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold">Friend Details</h1>
+          </div>
+        </header>
 
-      <AppLayout.Content className="px-4">
-        <div className="pt-4 space-y-4">
+        <div className="px-4 pt-4 pb-8 space-y-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
@@ -172,7 +172,7 @@ export default function FriendDetail() {
 
           <SettlementHistory friendId={friend.id} friendName={friend.name} />
         </div>
-      </AppLayout.Content>
+      </div>
     </AppLayout>
   );
 }
