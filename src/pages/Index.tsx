@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 const Index = () => {
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Header */}
-        <header className="px-5 pt-6 pb-4">
+      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <Button variant="ghost" size="icon" className="relative">
@@ -18,10 +18,11 @@ const Index = () => {
               <span className="absolute top-1 right-1 w-2 h-2 bg-negative rounded-full" />
             </Button>
           </div>
+          <div className="mt-4 border-b border-border" />
         </header>
 
-        {/* Content */}
-        <div className="px-5 space-y-5 pb-8">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-5 space-y-5 pb-8 pt-4">
           <div className="animate-fade-in">
             <BalanceCard />
           </div>

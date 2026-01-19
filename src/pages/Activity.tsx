@@ -120,17 +120,18 @@ const Activity = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Header */}
-        <header className="px-5 pt-6 pb-4">
+      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <h1 className="text-2xl font-bold">Activity</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Track expenses and payments
           </p>
+          <div className="mt-4 border-b border-border" />
         </header>
 
-        {/* Tabs for Activity and Settlements */}
-        <div className="px-5 pb-8">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
           <Tabs defaultValue="activity" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="activity">All Activity</TabsTrigger>

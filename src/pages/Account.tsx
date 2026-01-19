@@ -127,39 +127,42 @@ const Account = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top">
-        {/* Header */}
-        <header className="px-5 pt-6 pb-4">
+      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Account</h1>
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>
           </div>
+          <div className="mt-4 border-b border-border" />
         </header>
 
-        {/* Profile Card */}
-        <div className="px-5 mb-5">
-          <Card className="animate-fade-in">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 ring-4 ring-primary/20">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{profile?.display_name || 'User'}</h2>
-                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Profile Card */}
+          <div className="px-5 mb-5 pt-4">
+            <Card className="animate-fade-in">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 ring-4 ring-primary/20">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold">{profile?.display_name || 'User'}</h2>
+                    <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
+                    Edit
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
 
         {/* Edit Profile Dialog */}
         <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
@@ -295,6 +298,7 @@ const Account = () => {
           <p className="text-xs text-center text-muted-foreground mt-6">
             Splitley v1.0.0
           </p>
+          </div>
         </div>
       </div>
     </AppLayout>
