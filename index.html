@@ -23,53 +23,7 @@
   </head>
 
   <body>
-    <div id="root">
-      <!-- Splash screen shown while app loads -->
-      <div id="splash" style="
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: hsl(40 20% 98%);
-        z-index: 9999;
-      ">
-        <div style="
-          width: 80px;
-          height: 80px;
-          border-radius: 20px;
-          background: linear-gradient(135deg, hsl(162 63% 41%), hsl(162 63% 51%));
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 16px;
-          animation: pulse 1.5s ease-in-out infinite;
-        ">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-        </div>
-        <p style="
-          font-family: system-ui, sans-serif;
-          font-size: 18px;
-          font-weight: 600;
-          color: hsl(220 20% 12%);
-          margin: 0;
-        ">Splitley</p>
-      </div>
-      <style>
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.9; }
-        }
-        @media (prefers-color-scheme: dark) {
-          #splash { background: hsl(220 20% 8%) !important; }
-          #splash p { color: hsl(40 20% 96%) !important; }
-        }
-      </style>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

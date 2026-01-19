@@ -194,14 +194,14 @@ const GroupDetail = () => {
                         <X className="h-3 w-3" />
                       </button>
                     )}
-                    <Avatar className="h-10 w-10 mb-1">
+                    <Avatar className="h-12 w-12 mb-1">
                       <AvatarImage src={member.avatar_url || undefined} />
-                      <AvatarFallback className="text-sm">
+                      <AvatarFallback>
                         {(member.display_name || '?')[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-[10px] text-center truncate w-14 leading-tight">
-                      {member.display_name?.split(' ')[0]?.slice(0, 8) || 'Unknown'}
+                    <span className="text-xs text-center truncate w-full">
+                      {member.display_name?.split(' ')[0] || 'Unknown'}
                     </span>
                   </div>
                 );
@@ -268,20 +268,20 @@ const GroupDetail = () => {
                 group.expenses.map((expense) => (
                   <Card key={expense.id}>
                     <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-base shrink-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-lg">
                             {getCategoryIcon(expense.category || 'general')}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm truncate">{expense.description}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">
-                              Paid by {expense.paidByProfile?.display_name?.split(' ')[0] || 'Unknown'} • {format(new Date(expense.created_at), 'MMM d')}
+                          <div>
+                            <p className="font-medium">{expense.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Paid by {expense.paidByProfile?.display_name || 'Unknown'} • {format(new Date(expense.created_at), 'MMM d')}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <p className="font-semibold text-sm">{formatCurrency(Number(expense.amount))}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{formatCurrency(Number(expense.amount))}</p>
                           {(expense.paid_by === user?.id || isCreator) && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
