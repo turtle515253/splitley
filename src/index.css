@@ -141,15 +141,12 @@
   html {
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
-    -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Prevent overscroll bounce */
-    overscroll-behavior-y: contain;
   }
 }
 
