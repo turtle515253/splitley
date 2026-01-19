@@ -77,9 +77,9 @@ export function FriendBalanceList() {
                   </AvatarFallback>
                 </Avatar>
                 
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="font-medium text-sm">{balance.user.name}</p>
-                  <div className="flex items-center gap-1 text-xs">
+                <div className="ml-2 flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{balance.user.name}</p>
+                  <div className="flex items-center gap-1 text-[11px]">
                     <span className="text-muted-foreground">
                       {balance.amount > 0 ? 'owes you' : 'you owe'}
                     </span>
