@@ -132,7 +132,7 @@ const GroupDetail = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+      <div className="safe-top">
         {/* Sticky Header */}
         <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center gap-3 mb-4">
@@ -168,8 +168,8 @@ const GroupDetail = () => {
           <div className="mt-4 border-b border-border" />
         </header>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Content */}
+        <div>
 
         {/* Members */}
         <div className="px-5 mb-6">
