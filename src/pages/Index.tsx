@@ -23,17 +23,9 @@ const Index = () => {
 
         {/* Content */}
         <div className="px-5 space-y-5 pb-8 pt-4">
-          <div className="animate-fade-in">
-            <BalanceCard />
-          </div>
-          
-          <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <FriendBalanceList />
-          </div>
-          
-          <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <RecentActivity />
-          </div>
+          <BalanceCard />
+          <FriendBalanceList />
+          <RecentActivity />
         </div>
       </div>
     </AppLayout>
