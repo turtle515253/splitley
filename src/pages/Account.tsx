@@ -127,7 +127,7 @@ const Account = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top flex flex-col h-[calc(100vh-6rem)]">
+      <div className="safe-top">
         {/* Sticky Header */}
         <header className="sticky top-0 z-10 bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
@@ -139,8 +139,8 @@ const Account = () => {
           <div className="mt-4 border-b border-border" />
         </header>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Content */}
+        <div>
           {/* Profile Card */}
           <div className="px-5 mb-5 pt-4">
             <Card className="animate-fade-in">
