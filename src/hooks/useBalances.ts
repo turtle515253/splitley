@@ -18,6 +18,8 @@ export function useBalances() {
 
   return useQuery({
     queryKey: ['balances', user?.id],
+    // Use previous data as placeholder while fetching
+    placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<FriendBalance[]> => {
       if (!user) return [];
 

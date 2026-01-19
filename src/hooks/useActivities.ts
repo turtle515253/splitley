@@ -25,6 +25,8 @@ export function useActivities() {
 
   return useQuery({
     queryKey: ['activities', user?.id],
+    // Use previous data as placeholder while fetching
+    placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<Activity[]> => {
       if (!user) return [];
 

@@ -1,7 +1,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createIDBPersister } from "@/lib/queryPersister";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -19,10 +21,36 @@ import NativeCallback from "./pages/NativeCallback";
 import FriendDetail from "./pages/FriendDetail";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Configure QueryClient with persistence-friendly settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Keep cached data fresh for 5 minutes
+      staleTime: 1000 * 60 * 5,
+      // Cache data for 24 hours (persisted to IndexedDB)
+      gcTime: 1000 * 60 * 60 * 24,
+      // Refetch on mount if data is stale
+      refetchOnMount: true,
+      // Refetch when window regains focus
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+// Create IndexedDB persister for offline-first experience
+const persister = createIDBPersister();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider
+    client={queryClient}
+    persistOptions={{
+      persister,
+      // Keep cache for 7 days
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      // Don't block rendering while restoring cache
+      buster: 'v1',
+    }}
+  >
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
@@ -48,7 +76,7 @@ const App = () => (
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;
