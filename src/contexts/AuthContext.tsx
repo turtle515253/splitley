@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { saveDeviceState, loadDeviceState } from '@/lib/storage';
 
 interface Profile {
   id: string;
@@ -43,12 +44,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
+  // Persist auth data to device storage (non-blocking)
+  const persistAuthToDevice = (session: Session | null, provider: 'email' | 'google') => {
+    if (session?.user && session.refresh_token) {
+      saveDeviceState({
+        auth: {
+          user_id: session.user.id,
+          refresh_token: session.refresh_token,
+          provider,
+        },
+      });
+    }
+  };
+
+  // Clear auth from device storage (non-blocking)
+  const clearAuthFromDevice = () => {
+    saveDeviceState({ auth: null });
+  };
+
   useEffect(() => {
+    // Load device state silently on startup (non-blocking)
+    loadDeviceState().then((deviceState) => {
+      // If we have a stored refresh token and no active session, 
+      // Supabase will auto-recover via its own persistence
+      // This is just for awareness/logging
+      if (deviceState?.auth?.refresh_token) {
+        console.log('Device auth data available for recovery');
+      }
+    });
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Persist auth to device storage on login events
+        if (event === 'SIGNED_IN' && session) {
+          const provider = session.user?.app_metadata?.provider === 'google' ? 'google' : 'email';
+          persistAuthToDevice(session, provider);
+        }
+        
+        // Clear auth from device storage on logout
+        if (event === 'SIGNED_OUT') {
+          clearAuthFromDevice();
+        }
         
         // Defer profile fetch with setTimeout to avoid deadlock
         if (session?.user) {
@@ -68,6 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         fetchProfile(session.user.id).then(setProfile);
+        // Also persist existing session to device storage
+        const provider = session.user?.app_metadata?.provider === 'google' ? 'google' : 'email';
+        persistAuthToDevice(session, provider);
       }
       setIsLoading(false);
     });
@@ -135,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    // Auth cleared via onAuthStateChange SIGNED_OUT event
   };
 
   const updateProfile = async (updates: Partial<Profile>): Promise<{ error?: string }> => {
