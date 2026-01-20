@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { saveDeviceState, loadDeviceState } from '@/lib/storage';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -35,6 +36,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+
+  // Load preferences from device storage on mount (non-blocking)
+  useEffect(() => {
+    loadDeviceState().then((deviceState) => {
+      if (deviceState?.preferences) {
+        const { theme: storedTheme, accent_color } = deviceState.preferences;
+        if (storedTheme && !localStorage.getItem('splitley-theme')) {
+          setThemeState(storedTheme);
+        }
+        if (accent_color && !localStorage.getItem('splitley-accent-color')) {
+          setAccentColorState(accent_color as AccentColor);
+        }
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -94,11 +110,35 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setTheme = (newTheme: Theme) => {
     localStorage.setItem('splitley-theme', newTheme);
     setThemeState(newTheme);
+    
+    // Persist to device storage (non-blocking)
+    saveDeviceState({
+      preferences: {
+        theme: newTheme,
+        accent_color: accentColor,
+        currency: localStorage.getItem('splitease_currency') 
+          ? JSON.parse(localStorage.getItem('splitease_currency')!).code 
+          : 'USD',
+        notifications_enabled: Notification.permission === 'granted',
+      },
+    });
   };
 
   const setAccentColor = (color: AccentColor) => {
     localStorage.setItem('splitley-accent-color', color);
     setAccentColorState(color);
+    
+    // Persist to device storage (non-blocking)
+    saveDeviceState({
+      preferences: {
+        theme,
+        accent_color: color,
+        currency: localStorage.getItem('splitease_currency') 
+          ? JSON.parse(localStorage.getItem('splitease_currency')!).code 
+          : 'USD',
+        notifications_enabled: Notification.permission === 'granted',
+      },
+    });
   };
 
   return (

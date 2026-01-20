@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { saveDeviceState, loadDeviceState } from '@/lib/storage';
 
 export interface Currency {
   code: string;
@@ -42,6 +43,18 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   });
   const [userId, setUserId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load currency from device storage on mount (non-blocking)
+  useEffect(() => {
+    loadDeviceState().then((deviceState) => {
+      if (deviceState?.preferences?.currency && !localStorage.getItem(CURRENCY_STORAGE_KEY)) {
+        const savedCurrency = currencies.find(c => c.code === deviceState.preferences!.currency);
+        if (savedCurrency) {
+          setCurrencyState(savedCurrency);
+        }
+      }
+    });
+  }, []);
 
   // Listen for auth state changes and load currency from profile
   useEffect(() => {
@@ -96,6 +109,16 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const setCurrency = async (newCurrency: Currency) => {
     setCurrencyState(newCurrency);
+    
+    // Persist to device storage (non-blocking)
+    saveDeviceState({
+      preferences: {
+        currency: newCurrency.code,
+        theme: (localStorage.getItem('splitley-theme') as 'light' | 'dark' | 'system') || 'system',
+        accent_color: localStorage.getItem('splitley-accent-color') || 'mint',
+        notifications_enabled: Notification.permission === 'granted',
+      },
+    });
     
     // Save to database if user is logged in
     if (userId) {
