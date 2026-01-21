@@ -8,6 +8,3 @@ verify_jwt = false
 
 [functions.auth-start]
 verify_jwt = false
-
-[functions.bootstrap]
-verify_jwt = false

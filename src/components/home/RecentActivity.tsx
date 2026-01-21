@@ -1,14 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BootstrapActivity } from '@/hooks/useBootstrapQuery';
+import { useActivities, formatRelativeTime } from '@/hooks/useActivities';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { 
-  ChevronRight, Plus, CreditCard, Users,
+  ChevronRight, Plus, CreditCard, Users, Trash,
   Utensils, Coffee, Car, ShoppingCart, Home, Plane, Film, Gamepad2,
   Gift, Zap, Wifi, Briefcase, GraduationCap, Stethoscope
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 // Category icons mapping
 const categoryIcons: Record<string, any> = {
@@ -57,27 +58,11 @@ const activityColors = {
   member_added: 'bg-accent text-accent-foreground',
 };
 
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  
-  return date.toLocaleDateString();
-}
-
-interface RecentActivityProps {
-  activities?: BootstrapActivity[];
-  isLoading?: boolean;
-}
-
-export function RecentActivity({ activities = [], isLoading = false }: RecentActivityProps) {
+export function RecentActivity() {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
+  const { data: activities = [], isLoading } = useActivities();
+  const recentActivities = activities.slice(0, 4);
 
   return (
     <Card>
@@ -104,8 +89,8 @@ export function RecentActivity({ activities = [], isLoading = false }: RecentAct
               </div>
             ))}
           </div>
-        ) : activities.length > 0 ? (
-          activities.map((activity, index) => {
+        ) : recentActivities.length > 0 ? (
+          recentActivities.map((activity, index) => {
             const category = activity.category || 'general';
             const CategoryIcon = activity.type === 'expense_added' 
               ? (categoryIcons[category] || categoryIcons.general)
@@ -116,13 +101,14 @@ export function RecentActivity({ activities = [], isLoading = false }: RecentAct
               ? (categoryColors[category] || categoryColors.general)
               : activityColors[activity.type];
             
-            const isClickable = (activity.type === 'expense_added' && activity.group_id) || activity.type === 'group_created';
+            const isClickable = (activity.type === 'expense_added' && activity.groupId) || activity.type === 'group_created';
             
             const handleActivityClick = () => {
-              if (activity.type === 'expense_added' && activity.group_id) {
-                navigate(`/groups/${activity.group_id}`);
+              if (activity.type === 'expense_added' && activity.groupId) {
+                navigate(`/groups/${activity.groupId}`);
               } else if (activity.type === 'group_created') {
-                navigate(`/groups/${activity.id}`);
+                const groupId = activity.id.replace('group-', '');
+                navigate(`/groups/${groupId}`);
               }
             };
             
@@ -143,22 +129,38 @@ export function RecentActivity({ activities = [], isLoading = false }: RecentAct
                   <CategoryIcon className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {activity.description}
+                  <p className="text-sm font-medium">
+                    {activity.type === 'expense_added' && activity.expenseDescription && (
+                      <>
+                        <span className="font-semibold">{activity.addedByName || activity.payerName}</span>
+                        {' added "'}
+                        <span className="font-semibold">{activity.expenseDescription}</span>
+                        {'"'}
+                      </>
+                    )}
+                    {activity.type === 'payment_made' && (
+                      <span className="font-semibold">{activity.payerName}</span>
+                    )}
+                    {activity.type === 'group_created' && activity.groupName && (
+                      <>
+                        <span className="font-semibold">{activity.payerName}</span>
+                        <span className="text-muted-foreground"> created "{activity.groupName}"</span>
+                      </>
+                    )}
                   </p>
-                  {activity.user_share !== null && activity.user_share !== 0 && (
+                  {activity.userShare !== undefined && activity.userShare !== 0 && (
                     <p className={cn(
                       "text-xs font-semibold",
-                      activity.user_share > 0 ? "text-positive" : "text-negative"
+                      activity.userShare > 0 ? "text-positive" : "text-negative"
                     )}>
-                      {activity.user_share > 0 
-                        ? `You get back ${formatCurrency(activity.user_share)}`
-                        : `You owe ${formatCurrency(Math.abs(activity.user_share))}`
+                      {activity.userShare > 0 
+                        ? `You get back ${formatCurrency(activity.userShare)}`
+                        : `You owe ${formatCurrency(Math.abs(activity.userShare))}`
                       }
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {formatRelativeTime(activity.created_at)}
+                    {formatRelativeTime(activity.createdAt)}
                   </p>
                 </div>
                 {isClickable && (
