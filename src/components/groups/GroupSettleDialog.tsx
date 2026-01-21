@@ -65,8 +65,6 @@ export function GroupSettleDialog({
         receiverId: debt.to.user_id,
         amount: numAmount,
         groupId,
-        payerName: debt.from.display_name || 'Someone',
-        receiverName: debt.to.display_name || 'Someone',
       });
       
       setSettledAmount(numAmount);

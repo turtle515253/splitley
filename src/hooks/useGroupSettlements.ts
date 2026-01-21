@@ -2,11 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import {
-  generateTempId,
-  applyOptimisticGroupSettlement,
-  rollbackOptimisticGroupSettlement,
-} from '@/lib/optimisticUpdates';
 
 export interface GroupSettlement {
   id: string;
@@ -85,18 +80,8 @@ export function useGroupSettlements(groupId: string | undefined) {
   });
 }
 
-export interface GroupSettleParams {
-  payerId: string;
-  receiverId: string;
-  amount: number;
-  groupId: string;
-  payerName?: string;
-  receiverName?: string;
-}
-
 export function useGroupSettle() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -104,7 +89,12 @@ export function useGroupSettle() {
       receiverId,
       amount,
       groupId,
-    }: GroupSettleParams) => {
+    }: {
+      payerId: string;
+      receiverId: string;
+      amount: number;
+      groupId: string;
+    }) => {
       // Use type assertion since the table is newly created
       const { data, error } = await (supabase as any)
         .from('group_settlements')
@@ -120,59 +110,16 @@ export function useGroupSettle() {
       if (error) throw error;
       return data;
     },
-    onMutate: async (variables) => {
-      if (!user) return {};
-      
-      const tempId = generateTempId();
-      
-      // Cancel related queries
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: ['bootstrap', user.id] }),
-        queryClient.cancelQueries({ queryKey: ['group-settlements', variables.groupId] }),
-      ]);
-
-      // Apply optimistic updates
-      const { previousBootstrap, previousGroupSettlements } = applyOptimisticGroupSettlement(queryClient, {
-        tempId,
-        payerId: variables.payerId,
-        receiverId: variables.receiverId,
-        amount: variables.amount,
-        groupId: variables.groupId,
-        userId: user.id,
-        payerName: variables.payerName || 'Someone',
-        receiverName: variables.receiverName || 'Someone',
-      });
-
-      return { previousBootstrap, previousGroupSettlements, tempId };
-    },
-    onError: (error, variables, context) => {
-      console.error('Error recording payment:', error);
-      
-      // Rollback on error
-      if (context && user) {
-        rollbackOptimisticGroupSettlement(
-          queryClient,
-          user.id,
-          variables.groupId,
-          context.previousBootstrap,
-          context.previousGroupSettlements
-        );
-      }
-      
-      toast.error('Failed to record payment');
-    },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-settlements', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       toast.success('Payment recorded successfully!');
     },
-    onSettled: async (_, __, variables) => {
-      // Silent background refetch
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['bootstrap'] }),
-        queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }),
-        queryClient.invalidateQueries({ queryKey: ['group-settlements', variables.groupId] }),
-        queryClient.invalidateQueries({ queryKey: ['balances'] }),
-        queryClient.invalidateQueries({ queryKey: ['activities'] }),
-      ]);
+    onError: (error) => {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
     },
   });
 }

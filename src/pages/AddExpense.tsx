@@ -207,14 +207,12 @@ const AddExpense = () => {
     }
 
     try {
-      const payerName = paidByMember?.display_name || 'You';
       await createExpense.mutateAsync({
         description,
         amount: totalAmount,
         category,
         groupId: selectedGroup,
         paidBy,
-        paidByName: payerName,
         splits,
       });
       navigate(-1);
