@@ -53,7 +53,7 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
     const friendOwesUser = balanceAmount > 0;
 
     settleUp.mutate(
-      { friendId: friend.id, amount: numAmount, friendOwesUser },
+      { friendId: friend.id, amount: numAmount, friendOwesUser, friendName: friend.name },
       {
         onSuccess: (result) => {
           setSettledAmount(numAmount);

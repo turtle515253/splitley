@@ -2,18 +2,26 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  generateTempId,
+  applyOptimisticExpense,
+  rollbackOptimisticExpense,
+  applyOptimisticSettlement,
+  rollbackOptimisticSettlement,
+} from '@/lib/optimisticUpdates';
 
 interface ExpenseSplit {
   userId: string;
   amount: number;
 }
 
-interface CreateExpenseParams {
+export interface CreateExpenseParams {
   description: string;
   amount: number;
   category: string | null;
   groupId: string | null;
   paidBy: string;
+  paidByName?: string;
   splits: ExpenseSplit[];
 }
 
@@ -64,19 +72,60 @@ export function useCreateExpense() {
 
       return expense;
     },
-    onSuccess: async (_, variables) => {
-      // Use Promise.all to wait for all invalidations to complete
+    onMutate: async (variables) => {
+      if (!user) return {};
+      
+      const tempId = generateTempId();
+      
+      // Cancel related queries to prevent overwrite
       await Promise.all([
+        queryClient.cancelQueries({ queryKey: ['bootstrap', user.id] }),
+        variables.groupId ? queryClient.cancelQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
+      ]);
+
+      // Apply optimistic updates
+      const { previousBootstrap, previousGroup } = applyOptimisticExpense(queryClient, {
+        tempId,
+        description: variables.description,
+        amount: variables.amount,
+        category: variables.category,
+        groupId: variables.groupId,
+        paidBy: variables.paidBy,
+        paidByName: variables.paidByName || 'You',
+        splits: variables.splits,
+        userId: user.id,
+      });
+
+      return { previousBootstrap, previousGroup, tempId };
+    },
+    onError: (error, variables, context) => {
+      console.error('Error creating expense:', error);
+      
+      // Rollback on error
+      if (context && user) {
+        rollbackOptimisticExpense(
+          queryClient,
+          user.id,
+          variables.groupId,
+          context.previousBootstrap,
+          context.previousGroup
+        );
+      }
+      
+      toast.error('Failed to add expense');
+    },
+    onSuccess: () => {
+      toast.success('Expense added successfully!');
+    },
+    onSettled: async (_, __, variables) => {
+      // Silent background refetch to reconcile with server
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bootstrap'] }),
         queryClient.invalidateQueries({ queryKey: ['groups'] }),
         queryClient.invalidateQueries({ queryKey: ['activities'] }),
         queryClient.invalidateQueries({ queryKey: ['balances'] }),
         variables.groupId ? queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
       ]);
-      toast.success('Expense added successfully!');
-    },
-    onError: (error) => {
-      console.error('Error creating expense:', error);
-      toast.error('Failed to add expense');
     },
   });
 }
@@ -228,12 +277,19 @@ export function useDeleteExpense() {
   });
 }
 
+export interface SettleUpParams {
+  friendId: string;
+  amount: number;
+  friendOwesUser: boolean;
+  friendName?: string;
+}
+
 export function useSettleUp() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ friendId, amount, friendOwesUser }: { friendId: string; amount: number; friendOwesUser: boolean }) => {
+    mutationFn: async ({ friendId, amount, friendOwesUser }: SettleUpParams) => {
       if (!user) throw new Error('Must be logged in');
 
       console.log('[SettleUp] Starting settlement:', { friendId, amount, friendOwesUser, userId: user.id });
@@ -260,17 +316,49 @@ export function useSettleUp() {
 
       return { settlementId: settlement.id, amount };
     },
-    onSuccess: async () => {
+    onMutate: async (variables) => {
+      if (!user) return {};
+      
+      const tempId = generateTempId();
+      const payerId = variables.friendOwesUser ? variables.friendId : user.id;
+      const receiverId = variables.friendOwesUser ? user.id : variables.friendId;
+      
+      // Cancel related queries
+      await queryClient.cancelQueries({ queryKey: ['bootstrap', user.id] });
+
+      // Apply optimistic updates
+      const { previousBootstrap } = applyOptimisticSettlement(queryClient, {
+        tempId,
+        payerId,
+        receiverId,
+        amount: variables.amount,
+        userId: user.id,
+        friendName: variables.friendName || 'Friend',
+      });
+
+      return { previousBootstrap, tempId };
+    },
+    onError: (error, _, context) => {
+      console.error('Error settling up:', error);
+      
+      // Rollback on error
+      if (context && user) {
+        rollbackOptimisticSettlement(queryClient, user.id, context.previousBootstrap);
+      }
+      
+      toast.error('Failed to record settlement');
+    },
+    onSuccess: () => {
+      toast.success('Payment recorded!');
+    },
+    onSettled: async () => {
+      // Silent background refetch
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bootstrap'] }),
         queryClient.invalidateQueries({ queryKey: ['balances'] }),
         queryClient.invalidateQueries({ queryKey: ['activities'] }),
         queryClient.invalidateQueries({ queryKey: ['settlements'] }),
       ]);
-      toast.success('Payment recorded!');
-    },
-    onError: (error) => {
-      console.error('Error settling up:', error);
-      toast.error('Failed to record settlement');
     },
   });
 }
