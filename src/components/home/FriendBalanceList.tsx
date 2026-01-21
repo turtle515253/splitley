@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { useBalances, FriendBalance } from '@/hooks/useBalances';
+import { BootstrapFriendBalance } from '@/hooks/useBootstrapQuery';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Bell } from 'lucide-react';
@@ -11,21 +11,25 @@ import { useNavigate } from 'react-router-dom';
 import { SettleUpDialog } from '@/components/friends/SettleUpDialog';
 import { RemindDialog } from '@/components/friends/RemindDialog';
 
-export function FriendBalanceList() {
+interface FriendBalanceListProps {
+  balances?: BootstrapFriendBalance[];
+  isLoading?: boolean;
+}
+
+export function FriendBalanceList({ balances = [], isLoading = false }: FriendBalanceListProps) {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const { data: balances = [], isLoading } = useBalances();
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [remindDialogOpen, setRemindDialogOpen] = useState(false);
-  const [selectedBalance, setSelectedBalance] = useState<FriendBalance | null>(null);
+  const [selectedBalance, setSelectedBalance] = useState<BootstrapFriendBalance | null>(null);
 
-  const handleSettleClick = (e: React.MouseEvent, balance: FriendBalance) => {
+  const handleSettleClick = (e: React.MouseEvent, balance: BootstrapFriendBalance) => {
     e.stopPropagation();
     setSelectedBalance(balance);
     setSettleDialogOpen(true);
   };
 
-  const handleRemindClick = (e: React.MouseEvent, balance: FriendBalance) => {
+  const handleRemindClick = (e: React.MouseEvent, balance: BootstrapFriendBalance) => {
     e.stopPropagation();
     setSelectedBalance(balance);
     setRemindDialogOpen(true);
@@ -63,22 +67,22 @@ export function FriendBalanceList() {
           ) : (
             balances.map((balance, index) => (
               <div
-                key={balance.user.id}
-                onClick={() => navigate(`/friend/${balance.user.id}`)}
+                key={balance.user_id}
+                onClick={() => navigate(`/friend/${balance.user_id}`)}
                 className={cn(
                   "flex items-center p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 cursor-pointer animate-slide-up",
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarImage src={balance.user.avatar} />
+                  <AvatarImage src={balance.avatar_url || undefined} />
                   <AvatarFallback>
-                    {balance.user.name.split(' ').map(n => n[0]).join('')}
+                    {balance.display_name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="ml-3 flex-1 min-w-0">
-                  <p className="font-medium text-sm">{balance.user.name}</p>
+                  <p className="font-medium text-sm">{balance.display_name}</p>
                   <div className="flex items-center gap-1 text-xs">
                     <span className="text-muted-foreground">
                       {balance.amount > 0 ? 'owes you' : 'you owe'}
@@ -126,9 +130,9 @@ export function FriendBalanceList() {
             open={settleDialogOpen}
             onOpenChange={setSettleDialogOpen}
             friend={{
-              id: selectedBalance.user.id,
-              name: selectedBalance.user.name,
-              avatar: selectedBalance.user.avatar,
+              id: selectedBalance.user_id,
+              name: selectedBalance.display_name,
+              avatar: selectedBalance.avatar_url || undefined,
             }}
             balanceAmount={selectedBalance.amount}
           />
@@ -136,9 +140,9 @@ export function FriendBalanceList() {
             open={remindDialogOpen}
             onOpenChange={setRemindDialogOpen}
             friend={{
-              id: selectedBalance.user.id,
-              name: selectedBalance.user.name,
-              avatar: selectedBalance.user.avatar,
+              id: selectedBalance.user_id,
+              name: selectedBalance.display_name,
+              avatar: selectedBalance.avatar_url || undefined,
             }}
             balanceAmount={Math.abs(selectedBalance.amount)}
           />

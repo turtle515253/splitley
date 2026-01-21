@@ -1,22 +1,23 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useBalances } from '@/hooks/useBalances';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
 
-export function BalanceCard() {
+interface BalanceCardProps {
+  totals?: {
+    you_are_owed: number;
+    you_owe: number;
+    net_balance: number;
+  };
+  isLoading?: boolean;
+}
+
+export function BalanceCard({ totals, isLoading = false }: BalanceCardProps) {
   const { formatCurrency } = useCurrency();
-  const { data: balances = [], isLoading } = useBalances();
   
-  const totalOwed = balances
-    .filter(b => b.amount > 0)
-    .reduce((sum, b) => sum + b.amount, 0);
-  
-  const totalOwe = balances
-    .filter(b => b.amount < 0)
-    .reduce((sum, b) => sum + Math.abs(b.amount), 0);
-  
-  const netBalance = totalOwed - totalOwe;
+  const totalOwed = totals?.you_are_owed ?? 0;
+  const totalOwe = totals?.you_owe ?? 0;
+  const netBalance = totals?.net_balance ?? 0;
 
   return (
     <Card className="overflow-hidden">
