@@ -5,8 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGroups } from '@/hooks/useGroups';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { OfflineBanner } from '@/components/offline';
 import { Plus, ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NewGroupDialog } from '@/components/groups/NewGroupDialog';
@@ -15,24 +18,51 @@ const Groups = () => {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
+  const { isOnline, shouldShowOfflineBanner } = useOnlineStatus();
   
   const { data: groups = [], isLoading } = useGroups();
   
   const handleGroupClick = (groupId: string) => {
     navigate(`/groups/${groupId}`);
   };
+
+  const NewGroupButton = () => {
+    if (isOnline) {
+      return (
+        <Button size="sm" onClick={() => setShowNewGroupDialog(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          New Group
+        </Button>
+      );
+    }
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button size="sm" disabled className="opacity-50 cursor-not-allowed">
+              <Plus className="h-4 w-4 mr-1" />
+              New Group
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>You're offline</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
   
   return (
     <AppLayout>
       <div className="safe-top bg-background">
+        {/* Offline Banner */}
+        {shouldShowOfflineBanner && <OfflineBanner />}
+        
         {/* Header */}
         <header className="bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Groups</h1>
-            <Button size="sm" onClick={() => setShowNewGroupDialog(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              New Group
-            </Button>
+            <NewGroupButton />
           </div>
           <div className="mt-4 border-b border-border" />
         </header>
