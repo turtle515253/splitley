@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useActivities, formatRelativeTime, Activity as ActivityType } from '@/hooks/useActivities';
 import { useSettlements, useDeleteSettlement } from '@/hooks/useSettlements';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { OfflineBanner } from '@/components/offline';
 import { 
   Plus, CreditCard, Users, Trash, Loader2, MoreVertical, Trash2,
   Utensils, Coffee, Car, ShoppingCart, Home, Plane, Film, Gamepad2,
@@ -83,6 +85,7 @@ const Activity = () => {
   const { data: activities = [], isLoading } = useActivities();
   const { data: settlements = [], isLoading: settlementsLoading } = useSettlements();
   const deleteSettlement = useDeleteSettlement();
+  const { shouldShowOfflineBanner } = useOnlineStatus();
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string; groupId?: string } | null>(null);
   const [settlementToDelete, setSettlementToDelete] = useState<{ id: string; amount: number } | null>(null);
 
@@ -120,6 +123,9 @@ const Activity = () => {
   return (
     <AppLayout>
       <div className="safe-top bg-background">
+        {/* Offline Banner */}
+        {shouldShowOfflineBanner && <OfflineBanner />}
+        
         {/* Header */}
         <header className="bg-background px-5 pt-6 pb-4">
           <h1 className="text-2xl font-bold">Activity</h1>
