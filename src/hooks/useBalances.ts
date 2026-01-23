@@ -18,6 +18,8 @@ export function useBalances() {
 
   return useQuery({
     queryKey: ['balances', user?.id],
+    // Critical for offline persistence - never garbage collect this data
+    gcTime: Infinity,
     // Use previous data as placeholder while fetching
     placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<FriendBalance[]> => {

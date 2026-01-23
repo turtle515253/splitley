@@ -41,6 +41,8 @@ export function useGroups() {
 
   return useQuery({
     queryKey: ['groups', user?.id],
+    // Critical for offline persistence - never garbage collect this data
+    gcTime: Infinity,
     // Use previous data as placeholder while fetching
     placeholderData: (previousData) => previousData,
     queryFn: async () => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHydration } from '@/contexts/HydrationContext';
 
 export interface OnlineStatus {
   isOnline: boolean;
@@ -16,7 +17,7 @@ export interface OnlineStatus {
  * Rules:
  * - If online: normal operation
  * - If offline + cached data exists: show banner, allow read-only
- * - If offline + no cached data: show full offline screen
+ * - If offline + no cached data: show full offline screen (only after hydration)
  */
 export function useOnlineStatus(): OnlineStatus {
   const [isOnline, setIsOnline] = useState(() => 
@@ -24,6 +25,7 @@ export function useOnlineStatus(): OnlineStatus {
   );
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isHydrated } = useHydration();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -39,10 +41,11 @@ export function useOnlineStatus(): OnlineStatus {
   }, []);
 
   const hasCachedData = useMemo(() => {
-    if (!user?.id) return false;
+    // Don't evaluate cache until hydration is complete
+    if (!isHydrated || !user?.id) return false;
 
     // Check if any of the primary queries have cached data
-    // Using balances as the primary indicator (most critical for app usability)
+    // These queries have gcTime: Infinity and are persisted to IndexedDB
     const balancesQuery = queryClient.getQueryState(['balances', user.id]);
     const groupsQuery = queryClient.getQueryState(['groups', user.id]);
     const activitiesQuery = queryClient.getQueryState(['activities', user.id]);
@@ -54,12 +57,13 @@ export function useOnlineStatus(): OnlineStatus {
 
     // Consider cached if at least one primary query has data
     return !!(hasBalances || hasGroups || hasActivities);
-  }, [queryClient, user?.id, isOnline]); // Re-check when online status changes
+  }, [queryClient, user?.id, isOnline, isHydrated]); // Re-check when online status or hydration changes
 
   return {
     isOnline,
     hasCachedData,
     // Show full offline screen ONLY when offline AND no cached data exists
+    // Note: ProtectedRoute gates this on isHydrated to prevent flash on cold start
     shouldShowOfflineScreen: !isOnline && !hasCachedData,
     // Show subtle banner when offline BUT cached data exists
     shouldShowOfflineBanner: !isOnline && hasCachedData,
