@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export interface GroupMember {
   id: string;
@@ -40,7 +40,7 @@ export function useGroups() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['groups', user?.id],
+    queryKey: ["groups", user?.id],
     // Critical for offline persistence - never garbage collect this data
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
@@ -50,20 +50,17 @@ export function useGroups() {
 
       // Get groups the user is a member of
       const { data: memberGroups, error: memberError } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id);
 
       if (memberError) throw memberError;
       if (!memberGroups || memberGroups.length === 0) return [];
 
-      const groupIds = memberGroups.map(m => m.group_id);
+      const groupIds = memberGroups.map((m) => m.group_id);
 
       // Fetch groups with their members
-      const { data: groups, error: groupsError } = await supabase
-        .from('groups')
-        .select('*')
-        .in('id', groupIds);
+      const { data: groups, error: groupsError } = await supabase.from("groups").select("*").in("id", groupIds);
 
       if (groupsError) throw groupsError;
       if (!groups) return [];
@@ -72,19 +69,16 @@ export function useGroups() {
       const groupsWithDetails = await Promise.all(
         groups.map(async (group) => {
           // Get members
-          const { data: members } = await supabase
-            .from('group_members')
-            .select('id, user_id')
-            .eq('group_id', group.id);
+          const { data: members } = await supabase.from("group_members").select("id, user_id").eq("group_id", group.id);
 
           // Get member profiles
           const memberProfiles: GroupMember[] = [];
           if (members) {
             for (const member of members) {
               const { data: profile } = await supabase
-                .from('profiles_display')
-                .select('display_name, avatar_url')
-                .eq('id', member.user_id)
+                .from("profiles_display")
+                .select("display_name, avatar_url")
+                .eq("id", member.user_id)
                 .maybeSingle();
 
               memberProfiles.push({
@@ -97,10 +91,7 @@ export function useGroups() {
           }
 
           // Get total expenses
-          const { data: expenses } = await supabase
-            .from('expenses')
-            .select('amount')
-            .eq('group_id', group.id);
+          const { data: expenses } = await supabase.from("expenses").select("amount").eq("group_id", group.id);
 
           const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0;
 
@@ -109,12 +100,12 @@ export function useGroups() {
             members: memberProfiles,
             totalExpenses,
           } as Group;
-        })
+        }),
       );
 
       return groupsWithDetails;
     },
-    enabled: !!user,
+    enabled: true,
   });
 }
 
@@ -122,7 +113,7 @@ export function useGroup(groupId: string | undefined) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['group', groupId],
+    queryKey: ["group", groupId],
     // Use previous data as placeholder while fetching
     placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<GroupWithDetails | null> => {
@@ -130,28 +121,25 @@ export function useGroup(groupId: string | undefined) {
 
       // Fetch the group
       const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .select('*')
-        .eq('id', groupId)
+        .from("groups")
+        .select("*")
+        .eq("id", groupId)
         .maybeSingle();
 
       if (groupError) throw groupError;
       if (!group) return null;
 
       // Get members
-      const { data: members } = await supabase
-        .from('group_members')
-        .select('id, user_id')
-        .eq('group_id', group.id);
+      const { data: members } = await supabase.from("group_members").select("id, user_id").eq("group_id", group.id);
 
       // Get member profiles
       const memberProfiles: GroupMember[] = [];
       if (members) {
         for (const member of members) {
           const { data: profile } = await supabase
-            .from('profiles_display')
-            .select('display_name, avatar_url')
-            .eq('id', member.user_id)
+            .from("profiles_display")
+            .select("display_name, avatar_url")
+            .eq("id", member.user_id)
             .maybeSingle();
 
           memberProfiles.push({
@@ -165,31 +153,32 @@ export function useGroup(groupId: string | undefined) {
 
       // Get expenses with payer info
       const { data: expenses } = await supabase
-        .from('expenses')
-        .select('id, description, amount, category, created_at, paid_by')
-        .eq('group_id', groupId)
-        .order('created_at', { ascending: false });
+        .from("expenses")
+        .select("id, description, amount, category, created_at, paid_by")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
 
       const expensesWithPayer = await Promise.all(
         (expenses ?? []).map(async (expense) => {
           const { data: profile } = await supabase
-            .from('profiles_display')
-            .select('display_name, avatar_url')
-            .eq('id', expense.paid_by)
+            .from("profiles_display")
+            .select("display_name, avatar_url")
+            .eq("id", expense.paid_by)
             .maybeSingle();
 
           // Fetch splits for this expense (including is_settled for debt calculations)
           const { data: splits } = await supabase
-            .from('expense_splits')
-            .select('user_id, amount, is_settled')
-            .eq('expense_id', expense.id);
+            .from("expense_splits")
+            .select("user_id, amount, is_settled")
+            .eq("expense_id", expense.id);
 
           return {
             ...expense,
             paidByProfile: profile,
-            splits: splits?.map(s => ({ user_id: s.user_id, amount: Number(s.amount), is_settled: s.is_settled })) ?? [],
+            splits:
+              splits?.map((s) => ({ user_id: s.user_id, amount: Number(s.amount), is_settled: s.is_settled })) ?? [],
           };
-        })
+        }),
       );
 
       const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0;
@@ -210,20 +199,12 @@ export function useCreateGroup() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({
-      name,
-      emoji,
-      memberIds,
-    }: {
-      name: string;
-      emoji: string;
-      memberIds: string[];
-    }) => {
-      if (!user) throw new Error('Must be logged in');
+    mutationFn: async ({ name, emoji, memberIds }: { name: string; emoji: string; memberIds: string[] }) => {
+      if (!user) throw new Error("Must be logged in");
 
       // Create the group
       const { data: group, error: groupError } = await supabase
-        .from('groups')
+        .from("groups")
         .insert({
           name,
           emoji,
@@ -235,12 +216,10 @@ export function useCreateGroup() {
       if (groupError) throw groupError;
 
       // Add the creator as a member
-      const { error: creatorMemberError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: group.id,
-          user_id: user.id,
-        });
+      const { error: creatorMemberError } = await supabase.from("group_members").insert({
+        group_id: group.id,
+        user_id: user.id,
+      });
 
       if (creatorMemberError) throw creatorMemberError;
 
@@ -251,9 +230,7 @@ export function useCreateGroup() {
           user_id: userId,
         }));
 
-        const { error: membersError } = await supabase
-          .from('group_members')
-          .insert(memberInserts);
+        const { error: membersError } = await supabase.from("group_members").insert(memberInserts);
 
         if (membersError) throw membersError;
       }
@@ -261,12 +238,12 @@ export function useCreateGroup() {
       return group;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      toast.success('Group created successfully!');
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group created successfully!");
     },
     onError: (error) => {
-      console.error('Error creating group:', error);
-      toast.error('Failed to create group');
+      console.error("Error creating group:", error);
+      toast.error("Failed to create group");
     },
   });
 }
@@ -275,15 +252,9 @@ export function useAddGroupMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      groupId,
-      userId,
-    }: {
-      groupId: string;
-      userId: string;
-    }) => {
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
       const { data, error } = await supabase
-        .from('group_members')
+        .from("group_members")
         .insert({
           group_id: groupId,
           user_id: userId,
@@ -295,13 +266,13 @@ export function useAddGroupMember() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      toast.success('Member added successfully!');
+      queryClient.invalidateQueries({ queryKey: ["group", variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Member added successfully!");
     },
     onError: (error) => {
-      console.error('Error adding member:', error);
-      toast.error('Failed to add member');
+      console.error("Error adding member:", error);
+      toast.error("Failed to add member");
     },
   });
 }
@@ -311,11 +282,10 @@ export function useSearchProfiles() {
     mutationFn: async (searchQuery: string) => {
       // Use the security definer function for profile discovery
       // This bypasses RLS safely and only returns non-sensitive fields
-      const { data, error } = await supabase
-        .rpc('search_profiles_for_discovery', {
-          _search_query: searchQuery,
-          _limit: 10
-        });
+      const { data, error } = await supabase.rpc("search_profiles_for_discovery", {
+        _search_query: searchQuery,
+        _limit: 10,
+      });
 
       if (error) throw error;
       return (data ?? []) as { id: string; display_name: string | null; avatar_url: string | null }[];
@@ -327,29 +297,19 @@ export function useRemoveGroupMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      groupId,
-      memberId,
-    }: {
-      groupId: string;
-      memberId: string;
-    }) => {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('id', memberId);
+    mutationFn: async ({ groupId, memberId }: { groupId: string; memberId: string }) => {
+      const { error } = await supabase.from("group_members").delete().eq("group_id", groupId).eq("id", memberId);
 
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      toast.success('Member removed successfully!');
+      queryClient.invalidateQueries({ queryKey: ["group", variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Member removed successfully!");
     },
     onError: (error) => {
-      console.error('Error removing member:', error);
-      toast.error('Failed to remove member');
+      console.error("Error removing member:", error);
+      toast.error("Failed to remove member");
     },
   });
 }

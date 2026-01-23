@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-export type ActivityType = 'expense_added' | 'expense_deleted' | 'payment_made' | 'group_created' | 'member_added';
+export type ActivityType = "expense_added" | "expense_deleted" | "payment_made" | "group_created" | "member_added";
 
 export interface Activity {
   id: string;
@@ -24,7 +24,7 @@ export function useActivities() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['activities', user?.id],
+    queryKey: ["activities", user?.id],
     // Critical for offline persistence - never garbage collect this data
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
@@ -36,8 +36,9 @@ export function useActivities() {
 
       // Fetch expenses with related data using explicit foreign key hints
       const { data: expenses, error: expensesError } = await supabase
-        .from('expenses')
-        .select(`
+        .from("expenses")
+        .select(
+          `
           id,
           description,
           amount,
@@ -51,40 +52,37 @@ export function useActivities() {
             user_id,
             amount
           )
-        `)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .order("created_at", { ascending: false })
         .limit(50);
 
-      console.log('[useActivities] Expenses fetched:', expenses?.length || 0, 'Error:', expensesError);
+      console.log("[useActivities] Expenses fetched:", expenses?.length || 0, "Error:", expensesError);
 
       if (expenses && expenses.length > 0) {
         // Collect all payer and creator IDs to fetch their profiles
-        const userIds = [...new Set(expenses.flatMap(e => [e.paid_by, e.created_by]))];
-        
+        const userIds = [...new Set(expenses.flatMap((e) => [e.paid_by, e.created_by]))];
+
         // Fetch profiles using profiles_display view (no email, less RLS restrictive)
         const { data: userProfiles } = await supabase
-          .from('profiles_display')
-          .select('id, display_name')
-          .in('id', userIds);
-        
-        const profileMap = new Map(userProfiles?.map(p => [p.id, p.display_name]) || []);
+          .from("profiles_display")
+          .select("id, display_name")
+          .in("id", userIds);
+
+        const profileMap = new Map(userProfiles?.map((p) => [p.id, p.display_name]) || []);
 
         for (const expense of expenses) {
           const expenseData = expense as any; // Type cast to access created_by
-          const payerName = expenseData.paid_by === user.id 
-            ? 'You' 
-            : profileMap.get(expenseData.paid_by) || 'Someone';
-          
+          const payerName = expenseData.paid_by === user.id ? "You" : profileMap.get(expenseData.paid_by) || "Someone";
+
           const createdById = expenseData.created_by || expenseData.paid_by;
-          const addedByName = createdById === user.id
-            ? 'You'
-            : profileMap.get(createdById) || 'Someone';
-          
+          const addedByName = createdById === user.id ? "You" : profileMap.get(createdById) || "Someone";
+
           // Calculate user's share
           const splits = expense.expense_splits || [];
           const userSplit = splits.find((s: any) => s.user_id === user.id);
           const isUserPayer = expense.paid_by === user.id;
-          
+
           let userShare = 0;
           if (isUserPayer) {
             // User paid - they get back the sum of other people's splits
@@ -95,17 +93,17 @@ export function useActivities() {
             // User didn't pay but has a split - they owe this amount
             userShare = -Number(userSplit.amount);
           }
-          
+
           activities.push({
             id: `expense-${expense.id}`,
-            type: 'expense_added',
+            type: "expense_added",
             description: `${addedByName} added "${expense.description}"`,
             expenseDescription: expense.description,
             payerName,
             addedByName,
             amount: Number(expense.amount),
             userShare,
-            category: expense.category || 'general',
+            category: expense.category || "general",
             groupName: (expense.groups as any)?.name,
             createdAt: new Date(expense.created_at),
             expenseId: expense.id,
@@ -116,46 +114,43 @@ export function useActivities() {
 
       // Fetch settlements from the settlements table
       const { data: settlements } = await supabase
-        .from('settlements')
-        .select(`
+        .from("settlements")
+        .select(
+          `
           id,
           amount,
           created_at,
           payer_id,
           receiver_id
-        `)
+        `,
+        )
         .or(`payer_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (settlements && settlements.length > 0) {
         // Collect all user IDs to fetch their profiles
-        const userIds = [...new Set(settlements.flatMap(s => [s.payer_id, s.receiver_id]))];
-        
+        const userIds = [...new Set(settlements.flatMap((s) => [s.payer_id, s.receiver_id]))];
+
         const { data: userProfiles } = await supabase
-          .from('profiles_display')
-          .select('id, display_name')
-          .in('id', userIds);
-        
-        const profileMap = new Map(userProfiles?.map(p => [p.id, p.display_name]) || []);
+          .from("profiles_display")
+          .select("id, display_name")
+          .in("id", userIds);
+
+        const profileMap = new Map(userProfiles?.map((p) => [p.id, p.display_name]) || []);
 
         for (const settlement of settlements) {
-          const payerName = settlement.payer_id === user.id 
-            ? 'You' 
-            : profileMap.get(settlement.payer_id) || 'Someone';
-          const receiverName = settlement.receiver_id === user.id 
-            ? 'you' 
-            : profileMap.get(settlement.receiver_id) || 'someone';
-          
+          const payerName = settlement.payer_id === user.id ? "You" : profileMap.get(settlement.payer_id) || "Someone";
+          const receiverName =
+            settlement.receiver_id === user.id ? "you" : profileMap.get(settlement.receiver_id) || "someone";
+
           // If user is receiver, they received money (positive)
           // If user is payer, they paid (negative from their perspective for display)
-          const userShare = settlement.receiver_id === user.id 
-            ? Number(settlement.amount) 
-            : -Number(settlement.amount);
-          
+          const userShare = settlement.receiver_id === user.id ? Number(settlement.amount) : -Number(settlement.amount);
+
           activities.push({
             id: `settlement-${settlement.id}`,
-            type: 'payment_made',
+            type: "payment_made",
             description: `${payerName} paid ${receiverName}`,
             payerName,
             amount: Number(settlement.amount),
@@ -167,19 +162,19 @@ export function useActivities() {
 
       // Fetch groups created by the user
       const { data: groups } = await supabase
-        .from('groups')
-        .select('id, name, created_at, created_by')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false })
+        .from("groups")
+        .select("id, name, created_at, created_by")
+        .eq("created_by", user.id)
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (groups) {
         for (const group of groups) {
           activities.push({
             id: `group-${group.id}`,
-            type: 'group_created',
+            type: "group_created",
             description: `You created "${group.name}"`,
-            payerName: 'You',
+            payerName: "You",
             groupName: group.name,
             createdAt: new Date(group.created_at),
           });
@@ -189,18 +184,18 @@ export function useActivities() {
       // Sort all activities by date
       return activities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
-    enabled: !!user,
+    enabled: true,
   });
 }
 
 export function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return 'Just now';
+
+  if (diffInSeconds < 60) return "Just now";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  
+
   return date.toLocaleDateString();
 }

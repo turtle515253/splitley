@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useGroupDebts } from './useGroupDebts';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useGroupDebts } from "./useGroupDebts";
 
 export interface FriendBalance {
   oderId: string;
@@ -17,7 +17,7 @@ export function useBalances() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['balances', user?.id],
+    queryKey: ["balances", user?.id],
     // Critical for offline persistence - never garbage collect this data
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
@@ -26,12 +26,9 @@ export function useBalances() {
       if (!user) return [];
 
       // Get all groups the user is a member of
-      const { data: userGroups } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
+      const { data: userGroups } = await supabase.from("group_members").select("group_id").eq("user_id", user.id);
 
-      const groupIds = userGroups?.map(g => g.group_id) || [];
+      const groupIds = userGroups?.map((g) => g.group_id) || [];
 
       if (groupIds.length === 0) {
         return [];
@@ -43,15 +40,17 @@ export function useBalances() {
       for (const groupId of groupIds) {
         // Fetch group debts using the same logic as useGroupDebts
         const { data: membersData } = await supabase
-          .from('group_members')
-          .select(`
+          .from("group_members")
+          .select(
+            `
             user_id,
             profiles:profiles_display!fk_group_members_user_id (
               display_name,
               avatar_url
             )
-          `)
-          .eq('group_id', groupId);
+          `,
+          )
+          .eq("group_id", groupId);
 
         const members = (membersData || []).map((m: any) => ({
           user_id: m.user_id,
@@ -59,11 +58,12 @@ export function useBalances() {
           avatar_url: m.profiles?.avatar_url || null,
         }));
 
-        const memberIds = members.map(m => m.user_id);
+        const memberIds = members.map((m) => m.user_id);
 
         const { data: expensesData } = await supabase
-          .from('expenses')
-          .select(`
+          .from("expenses")
+          .select(
+            `
             id,
             amount,
             paid_by,
@@ -72,8 +72,9 @@ export function useBalances() {
               amount,
               is_settled
             )
-          `)
-          .eq('group_id', groupId);
+          `,
+          )
+          .eq("group_id", groupId);
 
         const expenses = (expensesData || []).map((e: any) => ({
           id: e.id,
@@ -87,9 +88,9 @@ export function useBalances() {
         }));
 
         const { data: groupSettlementsData } = await supabase
-          .from('group_settlements')
-          .select('payer_id, receiver_id, amount')
-          .eq('group_id', groupId);
+          .from("group_settlements")
+          .select("payer_id, receiver_id, amount")
+          .eq("group_id", groupId);
 
         const groupSettlements = (groupSettlementsData || []).map((s: any) => ({
           payer_id: s.payer_id,
@@ -98,8 +99,8 @@ export function useBalances() {
         }));
 
         const { data: regularSettlementsData } = await supabase
-          .from('settlements')
-          .select('payer_id, receiver_id, amount');
+          .from("settlements")
+          .select("payer_id, receiver_id, amount");
 
         const regularSettlements = (regularSettlementsData || [])
           .filter((s: any) => memberIds.includes(s.payer_id) && memberIds.includes(s.receiver_id))
@@ -110,7 +111,7 @@ export function useBalances() {
           }));
 
         // Import the shared calculation function
-        const { calculateDebtsFromData } = await import('./useGroupDebts');
+        const { calculateDebtsFromData } = await import("./useGroupDebts");
         const debts = calculateDebtsFromData(members, expenses, groupSettlements, regularSettlements);
 
         // Aggregate only debts involving current user
@@ -125,7 +126,7 @@ export function useBalances() {
                 oderId: debt.to.user_id,
                 user: {
                   id: debt.to.user_id,
-                  name: debt.to.display_name || 'Unknown',
+                  name: debt.to.display_name || "Unknown",
                   avatar: debt.to.avatar_url || undefined,
                 },
                 amount: -debt.amount,
@@ -141,7 +142,7 @@ export function useBalances() {
                 oderId: debt.from.user_id,
                 user: {
                   id: debt.from.user_id,
-                  name: debt.from.display_name || 'Unknown',
+                  name: debt.from.display_name || "Unknown",
                   avatar: debt.from.avatar_url || undefined,
                 },
                 amount: debt.amount,
@@ -151,8 +152,8 @@ export function useBalances() {
         }
       }
 
-      return Array.from(userDebts.values()).filter(b => Math.abs(b.amount) >= 1);
+      return Array.from(userDebts.values()).filter((b) => Math.abs(b.amount) >= 1);
     },
-    enabled: !!user,
+    enabled: true,
   });
 }
