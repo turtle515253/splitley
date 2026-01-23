@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { HydrationProvider, useHydration } from "@/contexts/HydrationContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SpaRedirector from "@/components/SpaRedirector";
 import Index from "./pages/Index";
@@ -40,22 +41,27 @@ const queryClient = new QueryClient({
 // Create IndexedDB persister for offline-first experience
 const persister = createIDBPersister();
 
-const App = () => (
-  <PersistQueryClientProvider
-    client={queryClient}
-    persistOptions={{
-      persister,
-      // Keep cache for 7 days
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-      buster: 'v1',
-    }}
-    // Critical: Don't block rendering while restoring cache
-    onSuccess={() => {
-      // Resume any paused mutations after cache restore
-      queryClient.resumePausedMutations();
-    }}
-  >
-    <ThemeProvider>
+// Inner component that can access HydrationContext
+function AppContent() {
+  const { markHydrated } = useHydration();
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        // Keep cache for 7 days
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        buster: 'v1',
+      }}
+      // Critical: Don't block rendering while restoring cache
+      onSuccess={() => {
+        // Mark hydration complete so offline logic can safely check cache
+        markHydrated();
+        // Resume any paused mutations after cache restore
+        queryClient.resumePausedMutations();
+      }}
+    >
       <TooltipProvider>
         <AuthProvider>
           <CurrencyProvider>
@@ -79,8 +85,16 @@ const App = () => (
           </CurrencyProvider>
         </AuthProvider>
       </TooltipProvider>
-    </ThemeProvider>
-  </PersistQueryClientProvider>
+    </PersistQueryClientProvider>
+  );
+}
+
+const App = () => (
+  <ThemeProvider>
+    <HydrationProvider>
+      <AppContent />
+    </HydrationProvider>
+  </ThemeProvider>
 );
 
 export default App;
