@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useHydration } from '@/contexts/HydrationContext';
 import { OfflineScreen } from '@/components/offline';
 
 interface ProtectedRouteProps {
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const { shouldShowOfflineScreen } = useOnlineStatus();
+  const { isHydrated } = useHydration();
 
   if (isLoading) {
     return (
@@ -24,8 +26,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Show full offline screen ONLY when offline AND no cached data exists
-  if (shouldShowOfflineScreen) {
+  // Show full offline screen ONLY when:
+  // 1. Hydration is complete (we've checked IndexedDB cache)
+  // 2. Device is offline
+  // 3. No cached data exists
+  // Before hydration completes, always render the app shell
+  if (isHydrated && shouldShowOfflineScreen) {
     return <OfflineScreen />;
   }
 
