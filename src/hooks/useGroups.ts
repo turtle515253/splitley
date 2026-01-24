@@ -40,7 +40,7 @@ export function useGroups() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["groups", user?.id],
+    queryKey: ["groups"],
     // Critical for offline persistence - never garbage collect this data
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
