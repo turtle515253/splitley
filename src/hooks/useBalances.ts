@@ -17,7 +17,7 @@ export function useBalances() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["balances", user?.id],
+    queryKey: ["balances"],
     // Critical for offline persistence - never garbage collect this data
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
