@@ -15,6 +15,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
+  isAuthResolved: boolean; // True after initial auth check completes
   login: (email: string, password: string) => Promise<{ error?: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
@@ -200,12 +201,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   };
 
+  // Auth is resolved once initial loading completes (regardless of whether user is logged in)
+  const isAuthResolved = !isLoading;
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       profile, 
-      isLoading, 
+      isLoading,
+      isAuthResolved,
       login, 
       signup, 
       signInWithGoogle, 

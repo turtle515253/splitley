@@ -14,7 +14,7 @@ export interface FriendBalance {
 }
 
 export function useBalances() {
-  const { user } = useAuth();
+  const { user, isAuthResolved } = useAuth();
 
   return useQuery({
     queryKey: ["balances"],
@@ -22,7 +22,13 @@ export function useBalances() {
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
     placeholderData: (previousData) => previousData,
+    // Prevent persisting empty results before auth resolves
+    retry: false,
     queryFn: async (): Promise<FriendBalance[]> => {
+      // Throw before auth resolves to prevent persisting empty data
+      if (!isAuthResolved) {
+        throw new Error('Auth not ready');
+      }
       if (!user) return [];
 
       // Get all groups the user is a member of

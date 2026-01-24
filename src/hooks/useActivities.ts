@@ -21,7 +21,7 @@ export interface Activity {
 }
 
 export function useActivities() {
-  const { user } = useAuth();
+  const { user, isAuthResolved } = useAuth();
 
   return useQuery({
     queryKey: ["activities"],
@@ -29,7 +29,13 @@ export function useActivities() {
     gcTime: Infinity,
     // Use previous data as placeholder while fetching
     placeholderData: (previousData) => previousData,
+    // Prevent persisting empty results before auth resolves
+    retry: false,
     queryFn: async (): Promise<Activity[]> => {
+      // Throw before auth resolves to prevent persisting empty data
+      if (!isAuthResolved) {
+        throw new Error('Auth not ready');
+      }
       if (!user) return [];
 
       const activities: Activity[] = [];
