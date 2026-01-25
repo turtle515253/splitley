@@ -1,10 +1,13 @@
 import despia from 'despia-native';
 
 /**
- * Check if running in Despia native runtime
+ * Check if running in Despia native runtime AND SDK is ready
+ * CRITICAL: Must check both user agent AND function availability
+ * to prevent readvalue:// being treated as browser navigation on cold start
  */
 export const isDespiaNative = (): boolean => {
-  return typeof navigator !== 'undefined' && 
+  return typeof despia === 'function' &&
+         typeof navigator !== 'undefined' && 
          navigator.userAgent.toLowerCase().includes('despia');
 };
 
