@@ -53,6 +53,11 @@ function AppContent() {
         // Keep cache for 7 days
         maxAge: 1000 * 60 * 60 * 24 * 7,
         buster: 'v1',
+        // Explicitly persist all successful queries to IndexedDB
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            query.state.status === 'success',
+        },
       }}
       // Critical: Don't block rendering while restoring cache
       onSuccess={() => {
