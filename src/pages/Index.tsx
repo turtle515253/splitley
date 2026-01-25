@@ -2,20 +2,13 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { BalanceCard } from '@/components/home/BalanceCard';
 import { FriendBalanceList } from '@/components/home/FriendBalanceList';
 import { RecentActivity } from '@/components/home/RecentActivity';
-import { OfflineBanner } from '@/components/offline';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
-  const { shouldShowOfflineBanner } = useOnlineStatus();
-
   return (
     <AppLayout>
       <div className="safe-top bg-background">
-        {/* Offline Banner */}
-        {shouldShowOfflineBanner && <OfflineBanner />}
-        
         {/* Header */}
         <header className="bg-background px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
