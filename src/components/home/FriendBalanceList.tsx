@@ -3,10 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBalances, FriendBalance } from '@/hooks/useBalances';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,57 +15,20 @@ export function FriendBalanceList() {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { data: balances = [], isLoading } = useBalances();
-  const { isOnline } = useOnlineStatus();
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [remindDialogOpen, setRemindDialogOpen] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<FriendBalance | null>(null);
 
   const handleSettleClick = (e: React.MouseEvent, balance: FriendBalance) => {
     e.stopPropagation();
-    if (!isOnline) return;
     setSelectedBalance(balance);
     setSettleDialogOpen(true);
   };
 
   const handleRemindClick = (e: React.MouseEvent, balance: FriendBalance) => {
     e.stopPropagation();
-    if (!isOnline) return;
     setSelectedBalance(balance);
     setRemindDialogOpen(true);
-  };
-
-  const SettleButton = ({ balance }: { balance: FriendBalance }) => {
-    if (isOnline) {
-      return (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => handleSettleClick(e, balance)}
-          className="text-xs h-8 px-3"
-        >
-          Settle
-        </Button>
-      );
-    }
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled
-              className="text-xs h-8 px-3 opacity-50 cursor-not-allowed"
-            >
-              Settle
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>You're offline</p>
-        </TooltipContent>
-      </Tooltip>
-    );
   };
 
   return (
@@ -132,7 +93,7 @@ export function FriendBalanceList() {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  {balance.amount > 0 && isOnline && (
+                  {balance.amount > 0 && (
                     <Button
                       size="icon"
                       variant="ghost"
@@ -143,7 +104,14 @@ export function FriendBalanceList() {
                       <Bell className="h-4 w-4" />
                     </Button>
                   )}
-                  <SettleButton balance={balance} />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => handleSettleClick(e, balance)}
+                    className="text-xs h-8 px-3"
+                  >
+                    Settle
+                  </Button>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>

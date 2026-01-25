@@ -1,31 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { useHydration } from '@/contexts/HydrationContext';
+import { useState, useEffect } from 'react';
 
 export interface OnlineStatus {
   isOnline: boolean;
-  hasCachedData: boolean;
-  shouldShowOfflineScreen: boolean;
-  shouldShowOfflineBanner: boolean;
 }
 
 /**
- * Cache-aware online status hook
- * Determines offline UI behavior based on network status AND cached data availability
- * 
- * Rules:
- * - If online: normal operation
- * - If offline + cached data exists: show banner, allow read-only
- * - If offline + no cached data: show full offline screen (only after hydration)
+ * Simple online status hook
+ * Phase 1 Offline-First: Only exposes isOnline for potential future use.
+ * No blocking UI or restrictions based on offline status.
  */
 export function useOnlineStatus(): OnlineStatus {
   const [isOnline, setIsOnline] = useState(() => 
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { isHydrated } = useHydration();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -40,32 +27,5 @@ export function useOnlineStatus(): OnlineStatus {
     };
   }, []);
 
-  const hasCachedData = useMemo(() => {
-    // Don't evaluate cache until hydration is complete
-    if (!isHydrated || !user?.id) return false;
-
-    // Check if any of the primary queries have cached data
-    // These queries have gcTime: Infinity and are persisted to IndexedDB
-    const balancesQuery = queryClient.getQueryState(['balances', user.id]);
-    const groupsQuery = queryClient.getQueryState(['groups', user.id]);
-    const activitiesQuery = queryClient.getQueryState(['activities', user.id]);
-
-    // Data is considered cached if dataUpdatedAt > 0 and data is not null/undefined
-    const hasBalances = balancesQuery?.dataUpdatedAt && balancesQuery.dataUpdatedAt > 0 && balancesQuery.data != null;
-    const hasGroups = groupsQuery?.dataUpdatedAt && groupsQuery.dataUpdatedAt > 0 && groupsQuery.data != null;
-    const hasActivities = activitiesQuery?.dataUpdatedAt && activitiesQuery.dataUpdatedAt > 0 && activitiesQuery.data != null;
-
-    // Consider cached if at least one primary query has data
-    return !!(hasBalances || hasGroups || hasActivities);
-  }, [queryClient, user?.id, isOnline, isHydrated]); // Re-check when online status or hydration changes
-
-  return {
-    isOnline,
-    hasCachedData,
-    // Show full offline screen ONLY when offline AND no cached data exists
-    // Note: ProtectedRoute gates this on isHydrated to prevent flash on cold start
-    shouldShowOfflineScreen: !isOnline && !hasCachedData,
-    // Show subtle banner when offline BUT cached data exists
-    shouldShowOfflineBanner: !isOnline && hasCachedData,
-  };
+  return { isOnline };
 }
