@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/static/css/main.cad8605d.css",
+    "main.js": "/static/js/main.15164a43.js",
+    "static/media/app-view.webp": "/static/media/app-view.67e3f7eff3c6edecb6fe.webp",
+    "static/media/splitley-logo.webp": "/static/media/splitley-logo.ebcf98d855b3e9872d91.webp",
+    "index.html": "/index.html",
+    "main.cad8605d.css.map": "/static/css/main.cad8605d.css.map",
+    "main.15164a43.js.map": "/static/js/main.15164a43.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.cad8605d.css",
+    "static/js/main.15164a43.js"
+  ]
+}

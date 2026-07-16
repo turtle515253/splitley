@@ -39,12 +39,12 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const hasProcessedOAuth = useRef(false);
 
-  // Handle OAuth callback (both web and native after deeplink)
+  // Handle the standard web OAuth callback.
   useEffect(() => {
     if (hasProcessedOAuth.current) return;
     
     const handleOAuthCallback = async () => {
-      // Parse tokens from URL hash (web flow) or query params (native flow after deeplink)
+      // Supabase may return tokens in the URL hash or query string.
       const hash = window.location.hash.substring(1);
       const hashParams = new URLSearchParams(hash);
       const windowParams = new URLSearchParams(window.location.search);
@@ -219,7 +219,7 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Google Sign In - now uses the new component with Despia support */}
+            {/* Google Sign In */}
             <GoogleLoginButton disabled={isLoading} />
 
             <div className="relative">

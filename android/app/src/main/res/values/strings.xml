@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Splitley</string>
+    <string name="title_activity_main">Splitley</string>
+    <string name="package_name">com.splitley.app</string>
+    <string name="custom_url_scheme">com.splitley.app</string>
+</resources>

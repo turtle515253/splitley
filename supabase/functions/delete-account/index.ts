@@ -2,17 +2,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 // Allowed origins for CORS - restrict to known domains
 const allowedOrigins = [
-  'https://zlmmflrlkvzvcaxuokhx.lovableproject.com',
-  'https://id-preview--zlmmflrlkvzvcaxuokhx.lovableproject.com',
+  'http://localhost',
   'http://localhost:5173',
   'http://localhost:8080',
 ];
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '';
-  // Check if origin matches allowed list or is a preview subdomain
-  const isAllowed = allowedOrigins.includes(origin) || 
-    origin.match(/^https:\/\/[a-z0-9-]+--zlmmflrlkvzvcaxuokhx\.lovableproject\.com$/);
+  const isAllowed = allowedOrigins.includes(origin);
   
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
