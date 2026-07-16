@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -13,6 +13,7 @@ interface ProtectedRouteProps {
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -23,6 +24,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
+    // Remember where the user was headed (e.g. a group link from an email) so
+    // Auth can return them there after login. sessionStorage survives the
+    // OAuth redirect round-trip, unlike router state.
+    if (location.pathname !== '/') {
+      sessionStorage.setItem('postLoginRedirect', location.pathname + location.search);
+    }
     return <Navigate to="/auth" replace />;
   }
 

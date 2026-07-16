@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAddGroupMember, useSearchProfiles } from '@/hooks/useGroups';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +37,7 @@ export const AddMemberDialog = ({
   currentMemberIds,
 }: AddMemberDialogProps) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const addMember = useAddGroupMember();
   const searchProfiles = useSearchProfiles();
   
@@ -115,13 +117,13 @@ export const AddMemberDialog = ({
       toast.error('Please enter a valid email address');
       return;
     }
-    
+
     setIsInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-invite', {
-        body: { 
+      const { data, error } = await supabase.functions.invoke('add-member', {
+        body: {
           email: inviteEmail.trim(),
-          redirectTo: `${window.location.origin}/auth`
+          groupId,
         },
       });
 
@@ -129,27 +131,34 @@ export const AddMemberDialog = ({
         console.error('Supabase function error:', error);
         throw new Error(error.message || 'Failed to send a request to the Edge Function');
       }
-      
-      if (data?.alreadyRegistered) {
-        toast.info('This user is already registered! Search for them in the Existing Users tab.');
+
+      if (data?.alreadyMember) {
+        toast.info('This person is already in the group.');
+        setInviteEmail('');
       } else if (data?.success) {
-        toast.success(`Invitation email sent to ${inviteEmail}!`);
+        queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['groups'] });
+        toast.success(
+          data.emailSent
+            ? `${inviteEmail} was added to the group and notified by email!`
+            : `${inviteEmail} was added to the group.`
+        );
         setInviteEmail('');
         onOpenChange(false);
       } else if (data?.error) {
         // Handle rate limit error specifically
         if (data.error.includes('Too many')) {
-          toast.error('You have sent too many invites. Please try again later.');
+          toast.error('You have added too many members recently. Please try again later.');
         } else {
           toast.error(data.error);
         }
       }
     } catch (error: any) {
-      console.error('Invite error:', error);
+      console.error('Add member error:', error);
       // Provide more specific error messages
-      const message = error.message || 'Failed to send invitation';
+      const message = error.message || 'Failed to add member';
       if (message.includes('rate') || message.includes('Too many')) {
-        toast.error('You have sent too many invites. Please try again later.');
+        toast.error('You have added too many members recently. Please try again later.');
       } else {
         toast.error(message);
       }
@@ -183,7 +192,7 @@ export const AddMemberDialog = ({
         <Tabs defaultValue="existing" className="mt-2">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="existing">Existing Users</TabsTrigger>
-            <TabsTrigger value="invite">Invite New</TabsTrigger>
+            <TabsTrigger value="invite">Add by Email</TabsTrigger>
           </TabsList>
           
           <TabsContent value="existing" className="space-y-4 pt-4">
@@ -285,7 +294,7 @@ export const AddMemberDialog = ({
                 <Mail className="h-8 w-8 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
-                Send an invite to someone who hasn't joined yet. They'll be added to this group once they register.
+                Add anyone by email. They'll join this group immediately and get an email letting them know.
               </p>
             </div>
             
@@ -308,8 +317,8 @@ export const AddMemberDialog = ({
               <Button className="flex-1" onClick={handleInvite} disabled={isInviting}>
                 {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                   <>
-                    <Mail className="h-4 w-4 mr-1" />
-                    Send Invite
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Add to Group
                   </>
                 )}
               </Button>

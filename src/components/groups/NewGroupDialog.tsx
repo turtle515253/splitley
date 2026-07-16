@@ -78,44 +78,21 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
 
   const [isInviting, setIsInviting] = useState(false);
 
-  const handleInviteEmail = async () => {
-    if (!inviteEmail.trim()) return;
+  const handleInviteEmail = () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail)) {
+    if (!emailRegex.test(email)) {
       toast.error('Please enter a valid email address');
       return;
     }
-    if (pendingInvites.includes(inviteEmail)) {
-      toast.error('This email is already invited');
+    if (pendingInvites.includes(email)) {
+      toast.error('This email is already added');
       return;
     }
-    
-    setIsInviting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-invite', {
-        body: { 
-          email: inviteEmail.trim(),
-          redirectTo: `${window.location.origin}/auth`
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.alreadyRegistered) {
-        toast.info('This user is already registered! Search for them in the Existing Users tab.');
-      } else if (data?.success) {
-        setPendingInvites((prev) => [...prev, inviteEmail]);
-        toast.success(`Invitation email sent to ${inviteEmail}!`);
-        setInviteEmail('');
-      } else if (data?.error) {
-        toast.error(data.error);
-      }
-    } catch (error: any) {
-      console.error('Invite error:', error);
-      toast.error(error.message || 'Failed to send invitation');
-    } finally {
-      setIsInviting(false);
-    }
+    // Members are added to the group (and emailed) once the group is created
+    setPendingInvites((prev) => [...prev, email]);
+    setInviteEmail('');
   };
 
   const removeInvite = (email: string) => {
@@ -129,14 +106,34 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
     }
 
     try {
-      await createGroup.mutateAsync({
+      const group = await createGroup.mutateAsync({
         name: groupName.trim(),
         emoji: selectedEmoji,
         memberIds: selectedMembers.map((m) => m.id),
       });
 
       if (pendingInvites.length > 0) {
-        toast.info(`${pendingInvites.length} invitation(s) will be sent`);
+        setIsInviting(true);
+        const results = await Promise.allSettled(
+          pendingInvites.map((email) =>
+            supabase.functions.invoke('add-member', {
+              body: { email, groupId: group.id },
+            }).then(({ data, error }) => {
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
+            })
+          )
+        );
+        setIsInviting(false);
+
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        const added = pendingInvites.length - failed;
+        if (added > 0) {
+          toast.success(`${added} member(s) added to the group and notified by email!`);
+        }
+        if (failed > 0) {
+          toast.error(`Failed to add ${failed} member(s). You can add them from the group page.`);
+        }
       }
 
       // Reset form
@@ -217,7 +214,7 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
             <Tabs defaultValue="existing" className="mt-2">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="existing">Existing Users</TabsTrigger>
-                <TabsTrigger value="invite">Invite New</TabsTrigger>
+                <TabsTrigger value="invite">Add by Email</TabsTrigger>
               </TabsList>
 
               <TabsContent value="existing" className="space-y-3 pt-3">
@@ -281,8 +278,8 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
 
               <TabsContent value="invite" className="space-y-3 pt-3">
                 <p className="text-xs text-muted-foreground">
-                  Invite someone who hasn't joined yet. They'll be added once they
-                  register.
+                  Add anyone by email. They'll be in the group as soon as it's
+                  created and get an email letting them know.
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -340,9 +337,9 @@ export const NewGroupDialog = ({ open, onOpenChange }: NewGroupDialogProps) => {
             <Button
               className="flex-1"
               onClick={handleCreate}
-              disabled={createGroup.isPending}
+              disabled={createGroup.isPending || isInviting}
             >
-              {createGroup.isPending ? (
+              {createGroup.isPending || isInviting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 'Create Group'

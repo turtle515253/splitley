@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { HydrationProvider, useHydration } from "@/contexts/HydrationContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SpaRedirector from "@/components/SpaRedirector";
+import DeepLinkHandler from "@/components/DeepLinkHandler";
 import Index from "./pages/Index";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
@@ -72,6 +73,7 @@ function AppContent() {
             <Sonner position="top-center" />
             <BrowserRouter>
               <SpaRedirector />
+              <DeepLinkHandler />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />

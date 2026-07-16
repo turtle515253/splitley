@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+[functions.add-member]
+verify_jwt = false

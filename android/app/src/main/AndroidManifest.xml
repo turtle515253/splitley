@@ -32,6 +32,18 @@
                     android:pathPrefix="/callback" />
             </intent-filter>
 
+            <!-- App Links: https://splitley.com/groups/... opens the app directly.
+                 Requires /.well-known/assetlinks.json hosted on both hosts. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="splitley.com" />
+                <data android:host="www.splitley.com" />
+                <data android:pathPrefix="/groups" />
+            </intent-filter>
+
         </activity>
 
         <provider

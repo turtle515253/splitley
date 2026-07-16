@@ -24,3 +24,4 @@ dist-ssr
 *.sln
 *.sw?
 Splitley Creds.txt
+supabase/.temp/

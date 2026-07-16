@@ -39,6 +39,14 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const hasProcessedOAuth = useRef(false);
 
+  // Where to land after login - e.g. a group link opened from an email.
+  // Stored by ProtectedRoute; survives the OAuth redirect round-trip.
+  const consumePostLoginRedirect = () => {
+    const target = sessionStorage.getItem('postLoginRedirect');
+    sessionStorage.removeItem('postLoginRedirect');
+    return target && target.startsWith('/') ? target : '/';
+  };
+
   // Handle the standard web OAuth callback.
   useEffect(() => {
     if (hasProcessedOAuth.current) return;
@@ -83,7 +91,7 @@ export default function Auth() {
           }
           
           toast.success('Welcome!');
-          navigate('/', { replace: true });
+          navigate(consumePostLoginRedirect(), { replace: true });
         } catch (err) {
           console.error('Error setting session:', err);
           setOauthError(err instanceof Error ? err.message : 'Failed to complete sign in');
@@ -98,7 +106,7 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isProcessingOAuth) {
-      navigate('/');
+      navigate(consumePostLoginRedirect());
     }
   }, [user, navigate, isProcessingOAuth]);
 
@@ -127,7 +135,7 @@ export default function Auth() {
           return;
         }
         toast.success('Welcome back!');
-        navigate('/');
+        navigate(consumePostLoginRedirect());
       } else {
         const result = signupSchema.safeParse({ name, email, password });
         if (!result.success) {
