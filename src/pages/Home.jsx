@@ -1,8 +1,6 @@
 import React from "react";
-import { useTheme } from "../contexts/ThemeContext.jsx";
+import { useTheme } from "../contexts/LandingThemeContext.jsx";
 import appViewWebp from "../assets/app-view.webp";
-
-const APP_URL = "https://splitley.lovable.app";
 
 function Feature({ title, desc, icon, theme }) {
   return (

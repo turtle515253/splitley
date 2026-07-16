@@ -1,5 +1,5 @@
 import React from "react";
-import { useTheme } from "../contexts/ThemeContext.jsx";
+import { useTheme } from "../contexts/LandingThemeContext.jsx";
 
 export default function Footer() {
   const { theme } = useTheme();

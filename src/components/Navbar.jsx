@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { useTheme } from "../contexts/ThemeContext.jsx";
+import { useTheme } from "../contexts/LandingThemeContext.jsx";
 import logoWebp from "../assets/splitley-logo.webp";
 
 const getStyles = (theme) => ({
