@@ -18,7 +18,6 @@ import Activity from "./pages/Activity";
 import Account from "./pages/Account";
 import AddExpense from "./pages/AddExpense";
 import Auth from "./pages/Auth";
-import NativeCallback from "./pages/NativeCallback";
 import FriendDetail from "./pages/FriendDetail";
 import NotFound from "./pages/NotFound";
 
@@ -75,7 +74,6 @@ function AppContent() {
               <SpaRedirector />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/native-callback" element={<NativeCallback />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
