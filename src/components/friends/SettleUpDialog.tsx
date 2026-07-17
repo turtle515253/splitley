@@ -52,21 +52,17 @@ export function SettleUpDialog({ open, onOpenChange, friend, balanceAmount, onSe
     // friendOwesUser is true when balance > 0 (they owe us, so they are paying us)
     const friendOwesUser = balanceAmount > 0;
 
-    settleUp.mutate(
-      { friendId: friend.id, amount: numAmount, friendOwesUser },
-      {
-        onSuccess: (result) => {
-          setSettledAmount(numAmount);
-          setIsSettled(true);
-          onSettle?.(numAmount);
-          
-          // Auto-close after showing success state
-          setTimeout(() => {
-            onOpenChange(false);
-          }, 2000);
-        },
-      }
-    );
+    // Applied optimistically; syncs in the background (or when back online)
+    settleUp.mutate({ friendId: friend.id, amount: numAmount, friendOwesUser });
+
+    setSettledAmount(numAmount);
+    setIsSettled(true);
+    onSettle?.(numAmount);
+
+    // Auto-close after showing success state
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 2000);
   };
 
   const handleFullSettle = () => {

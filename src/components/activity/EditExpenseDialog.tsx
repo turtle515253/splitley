@@ -18,6 +18,7 @@ import { ChevronDown, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpdateExpense } from '@/hooks/useExpenses';
+import { isOfflineId } from '@/lib/offlineMutations';
 import { GroupMember } from '@/hooks/useGroups';
 
 interface CategoryGroup {
@@ -271,20 +272,22 @@ export function EditExpenseDialog({
       return;
     }
 
-    try {
-      await updateExpense.mutateAsync({
-        expenseId: expense.id,
-        description,
-        amount: totalAmount,
-        category,
-        paidBy,
-        splits,
-        groupId: expense.group_id,
-      });
-      onOpenChange(false);
-    } catch (error) {
-      // Error handled by mutation
+    if (isOfflineId(expense.id)) {
+      toast.error('This expense is still syncing — try again once you are back online.');
+      return;
     }
+
+    // Applied optimistically; syncs in the background (or when back online)
+    updateExpense.mutate({
+      expenseId: expense.id,
+      description,
+      amount: totalAmount,
+      category,
+      paidBy,
+      splits,
+      groupId: expense.group_id,
+    });
+    onOpenChange(false);
   };
 
   if (!expense) return null;

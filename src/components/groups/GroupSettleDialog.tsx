@@ -43,7 +43,7 @@ export function GroupSettleDialog({
   const [isSettled, setIsSettled] = useState(false);
   const [settledAmount, setSettledAmount] = useState(0);
   
-  const { mutateAsync: settle, isPending } = useGroupSettle();
+  const { mutate: settle, isPending } = useGroupSettle();
 
   useEffect(() => {
     if (open && debt) {
@@ -55,28 +55,25 @@ export function GroupSettleDialog({
 
   if (!debt) return null;
 
-  const handleSettle = async () => {
+  const handleSettle = () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
-    try {
-      await settle({
-        payerId: debt.from.user_id,
-        receiverId: debt.to.user_id,
-        amount: numAmount,
-        groupId,
-      });
-      
-      setSettledAmount(numAmount);
-      setIsSettled(true);
-      
-      // Close dialog after showing success
-      setTimeout(() => {
-        onOpenChange(false);
-      }, 1500);
-    } catch (error) {
-      console.error('Settlement failed:', error);
-    }
+    // Applied optimistically; syncs in the background (or when back online)
+    settle({
+      payerId: debt.from.user_id,
+      receiverId: debt.to.user_id,
+      amount: numAmount,
+      groupId,
+    });
+
+    setSettledAmount(numAmount);
+    setIsSettled(true);
+
+    // Close dialog after showing success
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 1500);
   };
 
   const handleFullSettle = () => {

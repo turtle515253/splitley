@@ -1,20 +1,104 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useMutation, useQueryClient, QueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  createExpenseFn,
+  updateExpenseFn,
+  deleteExpenseFn,
+  settleUpFn,
+  makeOfflineId,
+  mutationKeys,
+  type CreateExpenseVars,
+  type UpdateExpenseVars,
+  type DeleteExpenseVars,
+  type SettleUpVars,
+  type ExpenseSplit,
+} from '@/lib/offlineMutations';
+import type { GroupWithDetails } from '@/hooks/useGroups';
+import type { Group } from '@/hooks/useGroups';
+import type { FriendBalance } from '@/hooks/useBalances';
+import type { Activity } from '@/hooks/useActivities';
 
-interface ExpenseSplit {
-  userId: string;
-  amount: number;
+export type { ExpenseSplit };
+
+/**
+ * All writes in this file are offline-capable:
+ * - onMutate applies the change to the cached data immediately (optimistic)
+ * - while offline the server call pauses and is persisted (see offlineMutations.ts)
+ * - on reconnect it syncs and the queries refetch
+ */
+
+function notifyQueuedIfOffline(message: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    toast.info(message);
+  }
 }
 
-interface CreateExpenseParams {
-  description: string;
-  amount: number;
-  category: string | null;
-  groupId: string | null;
-  paidBy: string;
-  splits: ExpenseSplit[];
+/** Balance delta per friend caused by an expense: positive = they owe you more. */
+function expenseBalanceDeltas(paidBy: string, splits: ExpenseSplit[], meId: string): Map<string, number> {
+  const deltas = new Map<string, number>();
+  if (paidBy === meId) {
+    for (const split of splits) {
+      if (split.userId !== meId) {
+        deltas.set(split.userId, (deltas.get(split.userId) ?? 0) + split.amount);
+      }
+    }
+  } else {
+    const mySplit = splits.find((s) => s.userId === meId);
+    if (mySplit) {
+      deltas.set(paidBy, (deltas.get(paidBy) ?? 0) - mySplit.amount);
+    }
+  }
+  return deltas;
+}
+
+function applyBalanceDeltas(queryClient: QueryClient, deltas: Map<string, number>) {
+  queryClient.setQueryData<FriendBalance[]>(['balances'], (old) => {
+    if (!old) return old;
+    return old.map((fb) =>
+      deltas.has(fb.user.id) ? { ...fb, amount: fb.amount + (deltas.get(fb.user.id) ?? 0) } : fb
+    );
+  });
+}
+
+interface CacheSnapshot {
+  group?: unknown;
+  groups?: unknown;
+  activities?: unknown;
+  balances?: unknown;
+  groupSettlements?: unknown;
+}
+
+async function snapshotCaches(queryClient: QueryClient, groupId?: string | null): Promise<CacheSnapshot> {
+  await Promise.all([
+    queryClient.cancelQueries({ queryKey: ['groups'] }),
+    queryClient.cancelQueries({ queryKey: ['activities'] }),
+    queryClient.cancelQueries({ queryKey: ['balances'] }),
+    groupId ? queryClient.cancelQueries({ queryKey: ['group', groupId] }) : Promise.resolve(),
+  ]);
+  return {
+    group: groupId ? queryClient.getQueryData(['group', groupId]) : undefined,
+    groups: queryClient.getQueryData(['groups']),
+    activities: queryClient.getQueryData(['activities']),
+    balances: queryClient.getQueryData(['balances']),
+  };
+}
+
+function restoreCaches(queryClient: QueryClient, snapshot: CacheSnapshot | undefined, groupId?: string | null) {
+  if (!snapshot) return;
+  if (groupId && snapshot.group !== undefined) queryClient.setQueryData(['group', groupId], snapshot.group);
+  if (snapshot.groups !== undefined) queryClient.setQueryData(['groups'], snapshot.groups);
+  if (snapshot.activities !== undefined) queryClient.setQueryData(['activities'], snapshot.activities);
+  if (snapshot.balances !== undefined) queryClient.setQueryData(['balances'], snapshot.balances);
+}
+
+async function invalidateExpenseCaches(queryClient: QueryClient, groupId?: string | null) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['groups'] }),
+    queryClient.invalidateQueries({ queryKey: ['activities'] }),
+    queryClient.invalidateQueries({ queryKey: ['balances'] }),
+    groupId ? queryClient.invalidateQueries({ queryKey: ['group', groupId] }) : Promise.resolve(),
+  ]);
 }
 
 export function useCreateExpense() {
@@ -22,208 +106,217 @@ export function useCreateExpense() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({
-      description,
-      amount,
-      category,
-      groupId,
-      paidBy,
-      splits,
-    }: CreateExpenseParams) => {
-      if (!user) throw new Error('Must be logged in');
+    mutationKey: mutationKeys.createExpense,
+    mutationFn: createExpenseFn,
+    onMutate: async (vars: CreateExpenseVars) => {
+      const snapshot = await snapshotCaches(queryClient, vars.groupId);
+      const tempId = makeOfflineId();
+      const nowIso = new Date().toISOString();
 
-      // Create the expense
-      const { data: expense, error: expenseError } = await supabase
-        .from('expenses')
-        .insert({
-          description,
-          amount,
-          category,
-          group_id: groupId,
-          paid_by: paidBy,
-        })
-        .select()
-        .single();
+      // Group detail: prepend the expense
+      if (vars.groupId) {
+        queryClient.setQueryData<GroupWithDetails | null>(['group', vars.groupId], (old) => {
+          if (!old) return old;
+          const payerMember = old.members.find((m) => m.user_id === vars.paidBy);
+          return {
+            ...old,
+            totalExpenses: old.totalExpenses + vars.amount,
+            expenses: [
+              {
+                id: tempId,
+                description: vars.description,
+                amount: vars.amount,
+                category: vars.category,
+                created_at: nowIso,
+                paid_by: vars.paidBy,
+                paidByProfile: payerMember
+                  ? { display_name: payerMember.display_name, avatar_url: payerMember.avatar_url }
+                  : null,
+                splits: vars.splits.map((s) => ({ user_id: s.userId, amount: s.amount, is_settled: false })),
+              },
+              ...old.expenses,
+            ],
+          };
+        });
 
-      if (expenseError) throw expenseError;
-
-      // Create expense splits
-      if (splits.length > 0) {
-        const splitInserts = splits.map((split) => ({
-          expense_id: expense.id,
-          user_id: split.userId,
-          amount: split.amount,
-        }));
-
-        const { error: splitsError } = await supabase
-          .from('expense_splits')
-          .insert(splitInserts);
-
-        if (splitsError) throw splitsError;
+        queryClient.setQueryData<Group[]>(['groups'], (old) =>
+          old?.map((g) => (g.id === vars.groupId ? { ...g, totalExpenses: g.totalExpenses + vars.amount } : g))
+        );
       }
 
-      return expense;
+      // Activity feed
+      if (user) {
+        const isUserPayer = vars.paidBy === user.id;
+        const mySplit = vars.splits.find((s) => s.userId === user.id);
+        const userShare = isUserPayer
+          ? vars.splits.filter((s) => s.userId !== user.id).reduce((sum, s) => sum + s.amount, 0)
+          : mySplit
+            ? -mySplit.amount
+            : 0;
+        const groups = queryClient.getQueryData<Group[]>(['groups']);
+        const groupName = groups?.find((g) => g.id === vars.groupId)?.name;
+
+        queryClient.setQueryData<Activity[]>(['activities'], (old) => {
+          if (!old) return old;
+          const activity: Activity = {
+            id: `expense-${tempId}`,
+            type: 'expense_added',
+            description: `You added "${vars.description}"`,
+            expenseDescription: vars.description,
+            payerName: isUserPayer ? 'You' : 'Someone',
+            addedByName: 'You',
+            amount: vars.amount,
+            userShare,
+            category: vars.category || 'general',
+            groupName,
+            createdAt: new Date(),
+            expenseId: tempId,
+            groupId: vars.groupId || undefined,
+          };
+          return [activity, ...old];
+        });
+
+        applyBalanceDeltas(queryClient, expenseBalanceDeltas(vars.paidBy, vars.splits, user.id));
+      }
+
+      notifyQueuedIfOffline("Expense saved offline — it will sync when you're back online");
+      return snapshot;
     },
     onSuccess: async (_, variables) => {
-      // Use Promise.all to wait for all invalidations to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['groups'] }),
-        queryClient.invalidateQueries({ queryKey: ['activities'] }),
-        queryClient.invalidateQueries({ queryKey: ['balances'] }),
-        variables.groupId ? queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
-      ]);
+      await invalidateExpenseCaches(queryClient, variables.groupId);
       toast.success('Expense added successfully!');
     },
-    onError: (error) => {
+    onError: (error, variables, snapshot) => {
+      restoreCaches(queryClient, snapshot, variables.groupId);
       console.error('Error creating expense:', error);
       toast.error('Failed to add expense');
     },
   });
 }
 
-interface UpdateExpenseParams {
-  expenseId: string;
-  description: string;
-  amount: number;
-  category: string | null;
-  paidBy: string;
-  splits: ExpenseSplit[];
-  groupId: string | null;
-}
-
 export function useUpdateExpense() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      expenseId,
-      description,
-      amount,
-      category,
-      paidBy,
-      splits,
-      groupId,
-    }: UpdateExpenseParams) => {
-      // Update the expense
-      const { error: expenseError } = await supabase
-        .from('expenses')
-        .update({
-          description,
-          amount,
-          category,
-          paid_by: paidBy,
-        })
-        .eq('id', expenseId);
+    mutationKey: mutationKeys.updateExpense,
+    mutationFn: updateExpenseFn,
+    onMutate: async (vars: UpdateExpenseVars) => {
+      const snapshot = await snapshotCaches(queryClient, vars.groupId);
 
-      if (expenseError) throw expenseError;
-
-      // Delete existing splits - use select to verify deletion happened
-      const { data: existingSplits } = await supabase
-        .from('expense_splits')
-        .select('id')
-        .eq('expense_id', expenseId);
-
-      if (existingSplits && existingSplits.length > 0) {
-        const splitIds = existingSplits.map(s => s.id);
-        const { error: deleteError } = await supabase
-          .from('expense_splits')
-          .delete()
-          .in('id', splitIds);
-
-        if (deleteError) throw deleteError;
-
-        // Verify deletion actually happened by checking again
-        const { data: remainingSplits } = await supabase
-          .from('expense_splits')
-          .select('id')
-          .eq('expense_id', expenseId);
-
-        if (remainingSplits && remainingSplits.length > 0) {
-          throw new Error('Failed to delete existing splits - you may not have permission');
-        }
-      }
-
-      // Create new expense splits with deduplication to prevent constraint violations
-      if (splits.length > 0) {
-        // Deduplicate splits by userId - keep the first occurrence of each user
-        const seenUserIds = new Set<string>();
-        const uniqueSplits = splits.filter(split => {
-          if (seenUserIds.has(split.userId)) {
-            console.warn(`Duplicate split detected for user ${split.userId}, skipping`);
-            return false;
-          }
-          seenUserIds.add(split.userId);
-          return true;
+      if (vars.groupId) {
+        queryClient.setQueryData<GroupWithDetails | null>(['group', vars.groupId], (old) => {
+          if (!old) return old;
+          const previous = old.expenses.find((e) => e.id === vars.expenseId);
+          const amountDelta = previous ? vars.amount - previous.amount : 0;
+          const payerMember = old.members.find((m) => m.user_id === vars.paidBy);
+          return {
+            ...old,
+            totalExpenses: old.totalExpenses + amountDelta,
+            expenses: old.expenses.map((e) =>
+              e.id === vars.expenseId
+                ? {
+                    ...e,
+                    description: vars.description,
+                    amount: vars.amount,
+                    category: vars.category,
+                    paid_by: vars.paidBy,
+                    paidByProfile: payerMember
+                      ? { display_name: payerMember.display_name, avatar_url: payerMember.avatar_url }
+                      : e.paidByProfile,
+                    splits: vars.splits.map((s) => ({ user_id: s.userId, amount: s.amount, is_settled: false })),
+                  }
+                : e
+            ),
+          };
         });
-
-        const splitInserts = uniqueSplits.map((split) => ({
-          expense_id: expenseId,
-          user_id: split.userId,
-          amount: split.amount,
-        }));
-
-        const { error: splitsError } = await supabase
-          .from('expense_splits')
-          .insert(splitInserts);
-
-        if (splitsError) throw splitsError;
       }
 
-      return { expenseId };
+      queryClient.setQueryData<Activity[]>(['activities'], (old) =>
+        old?.map((a) =>
+          a.expenseId === vars.expenseId
+            ? { ...a, expenseDescription: vars.description, amount: vars.amount, category: vars.category || 'general' }
+            : a
+        )
+      );
+
+      notifyQueuedIfOffline("Changes saved offline — they will sync when you're back online");
+      return snapshot;
     },
     onSuccess: async (_, variables) => {
-      // Use Promise.all to wait for all invalidations to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['groups'] }),
-        queryClient.invalidateQueries({ queryKey: ['activities'] }),
-        queryClient.invalidateQueries({ queryKey: ['balances'] }),
-        variables.groupId ? queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] }) : Promise.resolve(),
-      ]);
+      await invalidateExpenseCaches(queryClient, variables.groupId);
       toast.success('Expense updated successfully!');
     },
-    onError: (error) => {
+    onError: (error, variables, snapshot) => {
+      restoreCaches(queryClient, snapshot, variables.groupId);
       console.error('Error updating expense:', error);
-      toast.error('Failed to update expense');
+      toast.error(error instanceof Error && error.message.includes('syncing')
+        ? error.message
+        : 'Failed to update expense');
     },
   });
 }
 
 export function useDeleteExpense() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ expenseId, groupId }: { expenseId: string; groupId?: string | null }) => {
-      // Delete expense splits first (cascade should handle this but being explicit)
-      const { error: splitsError } = await supabase
-        .from('expense_splits')
-        .delete()
-        .eq('expense_id', expenseId);
+    mutationKey: mutationKeys.deleteExpense,
+    mutationFn: deleteExpenseFn,
+    onMutate: async (vars: DeleteExpenseVars) => {
+      const snapshot = await snapshotCaches(queryClient, vars.groupId);
 
-      if (splitsError) throw splitsError;
+      if (vars.groupId) {
+        queryClient.setQueryData<GroupWithDetails | null>(['group', vars.groupId], (old) => {
+          if (!old) return old;
+          const removed = old.expenses.find((e) => e.id === vars.expenseId);
+          if (!removed) return old;
 
-      // Delete the expense
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', expenseId);
+          // Reverse the expense's effect on balances using its cached splits
+          if (user) {
+            const deltas = expenseBalanceDeltas(
+              removed.paid_by,
+              removed.splits.map((s) => ({ userId: s.user_id, amount: -Number(s.amount) })),
+              user.id
+            );
+            applyBalanceDeltas(queryClient, deltas);
+          }
 
-      if (error) throw error;
-      
-      return { groupId };
+          return {
+            ...old,
+            totalExpenses: old.totalExpenses - removed.amount,
+            expenses: old.expenses.filter((e) => e.id !== vars.expenseId),
+          };
+        });
+
+        queryClient.setQueryData<Group[]>(['groups'], (old) => {
+          const removed = (snapshot.group as GroupWithDetails | null | undefined)?.expenses.find(
+            (e) => e.id === vars.expenseId
+          );
+          if (!removed) return old;
+          return old?.map((g) =>
+            g.id === vars.groupId ? { ...g, totalExpenses: g.totalExpenses - removed.amount } : g
+          );
+        });
+      }
+
+      queryClient.setQueryData<Activity[]>(['activities'], (old) =>
+        old?.filter((a) => a.expenseId !== vars.expenseId)
+      );
+
+      notifyQueuedIfOffline("Deletion saved offline — it will sync when you're back online");
+      return snapshot;
     },
     onSuccess: async (data) => {
-      // Use Promise.all to wait for all invalidations to complete
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['groups'] }),
-        queryClient.invalidateQueries({ queryKey: ['activities'] }),
-        queryClient.invalidateQueries({ queryKey: ['balances'] }),
-        data?.groupId ? queryClient.invalidateQueries({ queryKey: ['group', data.groupId] }) : Promise.resolve(),
-      ]);
+      await invalidateExpenseCaches(queryClient, data?.groupId);
       toast.success('Expense deleted successfully!');
     },
-    onError: (error) => {
+    onError: (error, variables, snapshot) => {
+      restoreCaches(queryClient, snapshot, variables.groupId);
       console.error('Error deleting expense:', error);
-      toast.error('Failed to delete expense');
+      toast.error(error instanceof Error && error.message.includes('syncing')
+        ? error.message
+        : 'Failed to delete expense');
     },
   });
 }
@@ -233,32 +326,33 @@ export function useSettleUp() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ friendId, amount, friendOwesUser }: { friendId: string; amount: number; friendOwesUser: boolean }) => {
-      if (!user) throw new Error('Must be logged in');
+    mutationKey: mutationKeys.settleUp,
+    mutationFn: settleUpFn,
+    onMutate: async (vars: SettleUpVars) => {
+      const snapshot = await snapshotCaches(queryClient);
 
-      console.log('[SettleUp] Starting settlement:', { friendId, amount, friendOwesUser, userId: user.id });
+      // They paid you -> they owe you less; you paid them -> you owe them less
+      const delta = vars.friendOwesUser ? -vars.amount : vars.amount;
+      applyBalanceDeltas(queryClient, new Map([[vars.friendId, delta]]));
 
-      // Insert a settlement record - the exact amount being settled
-      // If friendOwesUser is true, friend is paying user (user is receiver)
-      // If false, user is paying friend (friend is receiver, but we record from user's perspective)
-      const { data: settlement, error } = await supabase
-        .from('settlements')
-        .insert({
-          payer_id: friendOwesUser ? friendId : user.id,
-          receiver_id: friendOwesUser ? user.id : friendId,
-          amount: amount,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[SettleUp] Error inserting settlement:', error);
-        throw error;
+      if (user) {
+        queryClient.setQueryData<Activity[]>(['activities'], (old) => {
+          if (!old) return old;
+          const activity: Activity = {
+            id: `settlement-${makeOfflineId()}`,
+            type: 'payment_made',
+            description: vars.friendOwesUser ? 'They paid you' : 'You paid them',
+            payerName: vars.friendOwesUser ? 'Someone' : 'You',
+            amount: vars.amount,
+            userShare: vars.friendOwesUser ? vars.amount : -vars.amount,
+            createdAt: new Date(),
+          };
+          return [activity, ...old];
+        });
       }
 
-      console.log('[SettleUp] Settlement recorded:', settlement);
-
-      return { settlementId: settlement.id, amount };
+      notifyQueuedIfOffline("Payment saved offline — it will sync when you're back online");
+      return snapshot;
     },
     onSuccess: async () => {
       await Promise.all([
@@ -268,7 +362,8 @@ export function useSettleUp() {
       ]);
       toast.success('Payment recorded!');
     },
-    onError: (error) => {
+    onError: (error, _variables, snapshot) => {
+      restoreCaches(queryClient, snapshot);
       console.error('Error settling up:', error);
       toast.error('Failed to record settlement');
     },

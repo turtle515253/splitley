@@ -8,7 +8,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import { useDeleteExpense } from '@/hooks/useExpenses';
+import { isOfflineId } from '@/lib/offlineMutations';
 
 interface DeleteExpenseDialogProps {
   open: boolean;
@@ -29,11 +31,13 @@ export function DeleteExpenseDialog({
 
   const handleDelete = () => {
     if (!expenseId) return;
-    deleteExpense({ expenseId, groupId }, {
-      onSuccess: () => {
-        onOpenChange(false);
-      },
-    });
+    if (isOfflineId(expenseId)) {
+      toast.error('This expense is still syncing — try again once you are back online.');
+      return;
+    }
+    // Applied optimistically; syncs in the background (or when back online)
+    deleteExpense({ expenseId, groupId });
+    onOpenChange(false);
   };
 
   return (

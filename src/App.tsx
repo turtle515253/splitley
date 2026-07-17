@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createIDBPersister } from "@/lib/queryPersister";
+import { registerOfflineMutationDefaults } from "@/lib/offlineMutations";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -38,6 +39,10 @@ const queryClient = new QueryClient({
   },
 });
 
+// Attach mutationFns for offline-capable writes so paused mutations restored
+// from IndexedDB can resume and sync once the network returns
+registerOfflineMutationDefaults(queryClient);
+
 // Create IndexedDB persister for offline-first experience
 const persister = createIDBPersister();
 
@@ -56,14 +61,18 @@ function AppContent() {
         // CRITICAL: Explicitly dehydrate successful queries to ensure data is persisted
         dehydrateOptions: {
           shouldDehydrateQuery: (query) => query.state.status === 'success',
+          // Persist writes made offline so they survive an app restart
+          shouldDehydrateMutation: (mutation) => mutation.state.isPaused,
         },
       }}
       // Critical: Don't block rendering while restoring cache
       onSuccess={() => {
         // Mark hydration complete so offline logic can safely check cache
         markHydrated();
-        // Resume any paused mutations after cache restore
-        queryClient.resumePausedMutations();
+        // Replay writes that were queued offline, then refresh from the server
+        queryClient.resumePausedMutations().then(() => {
+          queryClient.invalidateQueries();
+        });
       }}
     >
       <TooltipProvider>

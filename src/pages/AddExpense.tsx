@@ -206,19 +206,17 @@ const AddExpense = () => {
       });
     }
 
-    try {
-      await createExpense.mutateAsync({
-        description,
-        amount: totalAmount,
-        category,
-        groupId: selectedGroup,
-        paidBy,
-        splits,
-      });
-      navigate(-1);
-    } catch (error) {
-      // Error handled by mutation
-    }
+    // Fire-and-forget: the expense is applied to the cache optimistically and
+    // syncs in the background (or when back online). Errors surface via toast.
+    createExpense.mutate({
+      description,
+      amount: totalAmount,
+      category,
+      groupId: selectedGroup,
+      paidBy,
+      splits,
+    });
+    navigate(-1);
   };
 
   const currentUserProfile = selectedGroupData?.members.find(m => m.user_id === user?.id);
