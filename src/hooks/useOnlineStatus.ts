@@ -1,30 +1,22 @@
 import { useState, useEffect } from 'react';
+import { onlineManager } from '@tanstack/react-query';
 
 export interface OnlineStatus {
   isOnline: boolean;
 }
 
 /**
- * Simple online status hook
- * Phase 1 Offline-First: Only exposes isOnline for potential future use.
- * No blocking UI or restrictions based on offline status.
+ * Online status backed by React Query's onlineManager - the same source that
+ * decides whether mutations run or pause into the offline queue. On native
+ * it is fed by the Capacitor Network plugin (see lib/networkStatus.ts), on
+ * the web by browser online/offline events. Keeping UI and mutation behavior
+ * on one source prevents them from disagreeing.
  */
 export function useOnlineStatus(): OnlineStatus {
-  const [isOnline, setIsOnline] = useState(() => 
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return onlineManager.subscribe(setIsOnline);
   }, []);
 
   return { isOnline };

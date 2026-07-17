@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, QueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, QueryClient, onlineManager } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -29,7 +29,7 @@ export type { ExpenseSplit };
  */
 
 function notifyQueuedIfOffline(message: string) {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (!onlineManager.isOnline()) {
     toast.info(message);
   }
 }

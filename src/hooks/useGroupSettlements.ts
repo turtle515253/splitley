@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, onlineManager } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -133,7 +133,7 @@ export function useGroupSettle() {
         }
       }
 
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (!onlineManager.isOnline()) {
         toast.info("Payment saved offline — it will sync when you're back online");
       }
       return snapshot;
