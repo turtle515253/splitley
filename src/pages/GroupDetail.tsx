@@ -12,7 +12,6 @@ import { isOfflineId } from '@/lib/offlineMutations';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
-import { GroupSettingsDrawer } from '@/components/groups/GroupSettingsDrawer';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
@@ -40,7 +39,6 @@ const GroupDetail = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
   const [showBalanceSummary, setShowBalanceSummary] = useState(false);
   const [showChartsDialog, setShowChartsDialog] = useState(false);
-  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
@@ -138,7 +136,7 @@ const GroupDetail = () => {
                 <h1 className="text-xl font-bold truncate">{group.name}</h1>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setShowSettingsDrawer(true)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/groups/${groupId}/settings`)}>
               <Settings className="h-5 w-5" />
             </Button>
           </div>
@@ -364,15 +362,6 @@ const GroupDetail = () => {
         groupId={groupId}
       />
       
-      <GroupSettingsDrawer
-        open={showSettingsDrawer}
-        onOpenChange={setShowSettingsDrawer}
-        groupId={groupId!}
-        groupName={group.name}
-        groupEmoji={group.emoji || '👥'}
-        isCreator={isCreator}
-      />
-
       <GroupChartsDialog
         open={showChartsDialog}
         onOpenChange={setShowChartsDialog}

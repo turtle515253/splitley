@@ -16,6 +16,7 @@ import DeepLinkHandler from "@/components/DeepLinkHandler";
 import Index from "./pages/Index";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
+import GroupSettings from "./pages/GroupSettings";
 import Activity from "./pages/Activity";
 import Account from "./pages/Account";
 import AddExpense from "./pages/AddExpense";
@@ -88,6 +89,7 @@ function AppContent() {
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
+                <Route path="/groups/:groupId/settings" element={<ProtectedRoute><GroupSettings /></ProtectedRoute>} />
                 <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
                 <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
                 <Route path="/add-expense" element={<ProtectedRoute><AddExpense /></ProtectedRoute>} />
