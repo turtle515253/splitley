@@ -126,16 +126,15 @@ const Account = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <div className="flex items-center justify-between">
+      <div className="bg-background">
+        {/* Header - stays pinned while content scrolls */}
+        <header className="sticky top-0 z-40 safe-top bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="px-5 py-3 flex items-center justify-between">
             <h1 className="text-2xl font-bold">Account</h1>
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>
           </div>
-          <div className="mt-4 border-b border-border" />
         </header>
 
         {/* Content */}

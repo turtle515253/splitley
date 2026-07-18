@@ -7,13 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGroup, GroupMember } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ArrowLeft, Plus, Settings, UserPlus, X, MoreVertical, Trash2, Pencil, BarChart3, Wallet } from 'lucide-react';
+import { ArrowLeft, Plus, Settings, UserPlus, X, MoreVertical, Trash2, Pencil, BarChart3, Wallet, RefreshCw } from 'lucide-react';
+import { isOfflineId } from '@/lib/offlineMutations';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
-import { EditExpenseDialog } from '@/components/activity/EditExpenseDialog';
 import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
 import { GroupDebtsCard } from '@/components/groups/GroupDebtsCard';
 import { GroupSettlementHistory } from '@/components/groups/GroupSettlementHistory';
@@ -37,15 +37,6 @@ const GroupDetail = () => {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
-  const [expenseToEdit, setExpenseToEdit] = useState<{
-    id: string;
-    description: string;
-    amount: number;
-    category: string | null;
-    paid_by: string;
-    group_id: string;
-    splits?: { user_id: string; amount: number }[];
-  } | null>(null);
   const [showBalanceSummary, setShowBalanceSummary] = useState(false);
   const [showChartsDialog, setShowChartsDialog] = useState(false);
   const isCreator = group?.created_by === user?.id;
@@ -132,25 +123,27 @@ const GroupDetail = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <div className="flex items-center gap-3 mb-4">
+      <div className="bg-background">
+        {/* Top bar - stays pinned while content scrolls (Splitwise-style) */}
+        <header className="sticky top-0 z-40 safe-top bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="px-5 py-3 flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/groups')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{group.emoji || '👥'}</span>
-                <h1 className="text-xl font-bold">{group.name}</h1>
+                <h1 className="text-xl font-bold truncate">{group.name}</h1>
               </div>
             </div>
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>
           </div>
-          
-          {/* Group Stats */}
+        </header>
+
+        {/* Group Stats */}
+        <div className="px-5 pt-4 pb-4">
           <Card className="bg-primary/10 border-primary/20">
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
@@ -165,8 +158,7 @@ const GroupDetail = () => {
               </div>
             </CardContent>
           </Card>
-          <div className="mt-4 border-b border-border" />
-        </header>
+        </div>
 
         {/* Content */}
         <div className="px-5 pb-8">
@@ -271,13 +263,22 @@ const GroupDetail = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-lg">
-                            {getCategoryIcon(expense.category || 'general')}
+                            {isOfflineId(expense.id) ? (
+                              <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              getCategoryIcon(expense.category || 'general')
+                            )}
                           </div>
                           <div>
                             <p className="font-medium">{expense.description}</p>
                             <p className="text-xs text-muted-foreground">
                               Paid by {expense.paidByProfile?.display_name || 'Unknown'} • {format(new Date(expense.created_at), 'MMM d')}
                             </p>
+                            {isOfflineId(expense.id) && (
+                              <p className="text-xs text-destructive mt-0.5">
+                                Not yet synced with the server
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -291,14 +292,18 @@ const GroupDetail = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={() => setExpenseToEdit({
-                                    id: expense.id,
-                                    description: expense.description,
-                                    amount: Number(expense.amount),
-                                    category: expense.category,
-                                    paid_by: expense.paid_by,
-                                    group_id: groupId!,
-                                    splits: expense.splits,
+                                  onClick={() => navigate('/add-expense', {
+                                    state: {
+                                      editExpense: {
+                                        id: expense.id,
+                                        description: expense.description,
+                                        amount: Number(expense.amount),
+                                        category: expense.category,
+                                        paid_by: expense.paid_by,
+                                        group_id: groupId!,
+                                        splits: expense.splits,
+                                      },
+                                    },
                                   })}
                                 >
                                   <Pencil className="h-4 w-4 mr-2" />
@@ -355,13 +360,6 @@ const GroupDetail = () => {
         expenseId={expenseToDelete?.id || null}
         expenseDescription={expenseToDelete?.description || ''}
         groupId={groupId}
-      />
-      
-      <EditExpenseDialog
-        open={!!expenseToEdit}
-        onOpenChange={(open) => !open && setExpenseToEdit(null)}
-        expense={expenseToEdit}
-        groupMembers={group.members}
       />
       
       <GroupChartsDialog

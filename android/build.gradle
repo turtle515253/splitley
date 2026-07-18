@@ -22,6 +22,9 @@ allprojects {
         google()
         mavenCentral()
     }
+    // Keep build output outside the OneDrive-synced project folder;
+    // OneDrive locks files mid-build and breaks clean/merge tasks
+    buildDir = "${System.getProperty('user.home')}/.gradle-builds/splitley/${project.name}"
 }
 
 task clean(type: Delete) {

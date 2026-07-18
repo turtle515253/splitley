@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, onlineManager } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -133,9 +133,6 @@ export function useGroupSettle() {
         }
       }
 
-      if (!onlineManager.isOnline()) {
-        toast.info("Payment saved offline — it will sync when you're back online");
-      }
       return snapshot;
     },
     onSuccess: (_, variables) => {
@@ -144,7 +141,6 @@ export function useGroupSettle() {
       queryClient.invalidateQueries({ queryKey: ['group-debts', variables.groupId] });
       queryClient.invalidateQueries({ queryKey: ['balances'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
-      toast.success('Payment recorded successfully!');
     },
     onError: (error, variables, snapshot) => {
       if (snapshot) {

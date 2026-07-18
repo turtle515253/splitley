@@ -4,11 +4,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useActivities, formatRelativeTime, Activity as ActivityType } from '@/hooks/useActivities';
 import { useSettlements, useDeleteSettlement } from '@/hooks/useSettlements';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { 
+import {
   Plus, CreditCard, Users, Trash, Loader2, MoreVertical, Trash2,
   Utensils, Coffee, Car, ShoppingCart, Home, Plane, Film, Gamepad2,
-  Heart, Gift, Zap, Wifi, Briefcase, GraduationCap, Stethoscope
+  Heart, Gift, Zap, Wifi, Briefcase, GraduationCap, Stethoscope, RefreshCw
 } from 'lucide-react';
+import { isOfflineId } from '@/lib/offlineMutations';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
@@ -32,7 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Category icons mapping
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, typeof Plus> = {
   food: Utensils,
   drinks: Coffee,
   transport: Car,
@@ -119,14 +120,15 @@ const Activity = () => {
 
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <h1 className="text-2xl font-bold">Activity</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track expenses and payments
-          </p>
-          <div className="mt-4 border-b border-border" />
+      <div className="bg-background">
+        {/* Header - stays pinned while content scrolls */}
+        <header className="sticky top-0 z-40 safe-top bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="px-5 py-3">
+            <h1 className="text-2xl font-bold">Activity</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Track expenses and payments
+            </p>
+          </div>
         </header>
 
         {/* Content */}
@@ -152,7 +154,10 @@ const Activity = () => {
                       <CardContent className="p-2">
                         {items.map((activity, index) => {
                           const category = activity.category || 'general';
-                          const CategoryIcon = activity.type === 'expense_added' 
+                          const isUnsynced = isOfflineId(activity.expenseId) || activity.id.includes('offline-');
+                          const CategoryIcon = isUnsynced
+                            ? RefreshCw
+                            : activity.type === 'expense_added'
                             ? (categoryIcons[category] || categoryIcons.general)
                             : activity.type === 'payment_made'
                             ? CreditCard
@@ -204,6 +209,11 @@ const Activity = () => {
                                 {activity.type === 'expense_added' && activity.payerName !== activity.addedByName && (
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     Paid by {activity.payerName}
+                                  </p>
+                                )}
+                                {isUnsynced && (
+                                  <p className="text-xs text-destructive mt-0.5">
+                                    Not yet synced with the server
                                   </p>
                                 )}
                                 {activity.userShare !== undefined && activity.userShare !== 0 && (

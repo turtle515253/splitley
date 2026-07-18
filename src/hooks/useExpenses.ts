@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, QueryClient, onlineManager } from '@tanstack/react-query';
+import { useMutation, useQueryClient, QueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -27,12 +27,6 @@ export type { ExpenseSplit };
  * - while offline the server call pauses and is persisted (see offlineMutations.ts)
  * - on reconnect it syncs and the queries refetch
  */
-
-function notifyQueuedIfOffline(message: string) {
-  if (!onlineManager.isOnline()) {
-    toast.info(message);
-  }
-}
 
 /** Balance delta per friend caused by an expense: positive = they owe you more. */
 function expenseBalanceDeltas(paidBy: string, splits: ExpenseSplit[], meId: string): Map<string, number> {
@@ -179,12 +173,12 @@ export function useCreateExpense() {
         applyBalanceDeltas(queryClient, expenseBalanceDeltas(vars.paidBy, vars.splits, user.id));
       }
 
-      notifyQueuedIfOffline("Expense saved offline — it will sync when you're back online");
       return snapshot;
     },
     onSuccess: async (_, variables) => {
+      // Silent on success (Splitwise-style): the unsynced indicator on the
+      // expense clears once the refetch replaces the optimistic row
       await invalidateExpenseCaches(queryClient, variables.groupId);
-      toast.success('Expense added successfully!');
     },
     onError: (error, variables, snapshot) => {
       restoreCaches(queryClient, snapshot, variables.groupId);
@@ -239,12 +233,10 @@ export function useUpdateExpense() {
         )
       );
 
-      notifyQueuedIfOffline("Changes saved offline — they will sync when you're back online");
       return snapshot;
     },
     onSuccess: async (_, variables) => {
       await invalidateExpenseCaches(queryClient, variables.groupId);
-      toast.success('Expense updated successfully!');
     },
     onError: (error, variables, snapshot) => {
       restoreCaches(queryClient, snapshot, variables.groupId);
@@ -304,12 +296,10 @@ export function useDeleteExpense() {
         old?.filter((a) => a.expenseId !== vars.expenseId)
       );
 
-      notifyQueuedIfOffline("Deletion saved offline — it will sync when you're back online");
       return snapshot;
     },
     onSuccess: async (data) => {
       await invalidateExpenseCaches(queryClient, data?.groupId);
-      toast.success('Expense deleted successfully!');
     },
     onError: (error, variables, snapshot) => {
       restoreCaches(queryClient, snapshot, variables.groupId);
@@ -351,7 +341,6 @@ export function useSettleUp() {
         });
       }
 
-      notifyQueuedIfOffline("Payment saved offline — it will sync when you're back online");
       return snapshot;
     },
     onSuccess: async () => {
@@ -360,7 +349,6 @@ export function useSettleUp() {
         queryClient.invalidateQueries({ queryKey: ['activities'] }),
         queryClient.invalidateQueries({ queryKey: ['settlements'] }),
       ]);
-      toast.success('Payment recorded!');
     },
     onError: (error, _variables, snapshot) => {
       restoreCaches(queryClient, snapshot);

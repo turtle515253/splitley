@@ -24,21 +24,20 @@ const Groups = () => {
   
   return (
     <AppLayout>
-      <div className="safe-top bg-background">
-        {/* Header */}
-        <header className="bg-background px-5 pt-6 pb-4">
-          <div className="flex items-center justify-between">
+      <div className="bg-background">
+        {/* Header - stays pinned while content scrolls */}
+        <header className="sticky top-0 z-40 safe-top bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="px-5 py-3 flex items-center justify-between">
             <h1 className="text-2xl font-bold">Groups</h1>
             <Button size="sm" onClick={() => setShowNewGroupDialog(true)}>
               <Plus className="h-4 w-4 mr-1" />
               New Group
             </Button>
           </div>
-          <div className="mt-4 border-b border-border" />
         </header>
 
         {/* Content */}
-        <div className="px-5 pb-8">
+        <div className="px-5 pb-8 pt-4">
           {/* Loading State */}
           {isLoading && (
             <div className="space-y-3 pt-4">

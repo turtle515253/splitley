@@ -1,7 +1,9 @@
 ext {
     minSdkVersion = 24
     compileSdkVersion = 36
-    targetSdkVersion = 36
+    // 35 (not 36) so windowOptOutEdgeToEdgeEnforcement still applies and the
+    // WebView is laid out below the status bar instead of behind it
+    targetSdkVersion = 35
     androidxActivityVersion = '1.11.0'
     androidxAppCompatVersion = '1.7.1'
     androidxCoordinatorLayoutVersion = '1.3.0'
