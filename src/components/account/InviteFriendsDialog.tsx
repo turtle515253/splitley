@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Copy, Gift, Share2, Users, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { APP_WEB_URL } from '@/lib/appConfig';
 
 interface InviteFriendsDialogProps {
   open: boolean;
@@ -20,7 +21,8 @@ export function InviteFriendsDialog({ open, onOpenChange }: InviteFriendsDialogP
   const [invitesSent, setInvitesSent] = useState(0);
   
   const referralCode = user?.id?.slice(0, 8).toUpperCase() || 'SPLIT2024';
-  const referralLink = `${window.location.origin}/auth?ref=${referralCode}`;
+  // Use the public web URL - window.location.origin is https://localhost in the app
+  const referralLink = `${APP_WEB_URL}/auth?ref=${referralCode}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -47,9 +49,9 @@ export function InviteFriendsDialog({ open, onOpenChange }: InviteFriendsDialogP
     
     try {
       const { data, error } = await supabase.functions.invoke('send-invite', {
-        body: { 
+        body: {
           email: email.trim(),
-          redirectTo: `${window.location.origin}/auth`
+          redirectTo: `${APP_WEB_URL}/auth`
         },
       });
 
@@ -64,9 +66,9 @@ export function InviteFriendsDialog({ open, onOpenChange }: InviteFriendsDialogP
       } else if (data?.error) {
         toast.error(data.error);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Invite error:', error);
-      toast.error(error.message || 'Failed to send invitation');
+      toast.error(error instanceof Error ? error.message : 'Failed to send invitation');
     } finally {
       setIsSending(false);
     }

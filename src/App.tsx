@@ -13,6 +13,7 @@ import { HydrationProvider, useHydration } from "@/contexts/HydrationContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SpaRedirector from "@/components/SpaRedirector";
 import DeepLinkHandler from "@/components/DeepLinkHandler";
+import BiometricGate from "@/components/security/BiometricGate";
 import Index from "./pages/Index";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
@@ -79,6 +80,7 @@ function AppContent() {
       <TooltipProvider>
         <AuthProvider>
           <CurrencyProvider>
+            <BiometricGate />
             <Toaster />
             <Sonner position="top-center" />
             <BrowserRouter>

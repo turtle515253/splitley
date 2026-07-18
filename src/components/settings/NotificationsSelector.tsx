@@ -58,7 +58,7 @@ export function NotificationsSelector({ onClose }: NotificationsSelectorProps) {
             {permission === 'granted' 
               ? 'You will receive notifications for new expenses and settlements'
               : permission === 'denied'
-              ? 'Notifications are blocked. Enable them in browser settings.'
+              ? 'Notifications are blocked. Enable them in device settings.'
               : 'Get notified when expenses are added to your groups'
             }
           </p>

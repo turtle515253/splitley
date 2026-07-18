@@ -14,13 +14,15 @@ import { NotificationsSelector } from '@/components/settings/NotificationsSelect
 import { EditProfileDialog } from '@/components/account/EditProfileDialog';
 import { InviteFriendsDialog } from '@/components/account/InviteFriendsDialog';
 import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog';
-import { 
-  ChevronRight, 
-  Settings, 
-  CreditCard, 
-  Bell, 
-  HelpCircle, 
-  Shield, 
+import { SecuritySheet } from '@/components/security/SecuritySheet';
+import { PRIVACY_POLICY_URL } from '@/lib/appConfig';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import {
+  ChevronRight,
+  Settings,
+  Bell,
+  Shield,
   LogOut,
   User,
   Palette,
@@ -28,20 +30,20 @@ import {
   Coins,
   X,
   Loader2,
-  Trash2
+  Trash2,
+  Fingerprint
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const menuItems = [
   { icon: User, label: 'Edit Profile', subtitle: 'Update your personal info', action: 'profile' },
-  { icon: CreditCard, label: 'Payment Methods', subtitle: 'Manage cards and accounts', action: 'payment' },
   { icon: Coins, label: 'Currency', subtitle: 'Change display currency', action: 'currency' },
   { icon: Bell, label: 'Notifications', subtitle: 'Customize alerts', action: 'notifications' },
   { icon: Palette, label: 'Appearance', subtitle: 'Theme and display', action: 'appearance' },
-  { icon: Shield, label: 'Privacy & Security', subtitle: 'Protect your account', action: 'privacy' },
+  { icon: Shield, label: 'Privacy', subtitle: 'Read our privacy policy', action: 'privacy' },
+  { icon: Fingerprint, label: 'Security', subtitle: 'App lock and biometrics', action: 'security' },
   { icon: Share, label: 'Invite Friends', subtitle: 'Earn rewards', action: 'invite' },
-  { icon: HelpCircle, label: 'Help & Support', subtitle: 'Get assistance', action: 'help' },
 ];
 
 const Account = () => {
@@ -56,6 +58,7 @@ const Account = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showSecuritySheet, setShowSecuritySheet] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -79,17 +82,18 @@ const Account = () => {
       case 'invite':
         setShowInviteFriends(true);
         break;
-      case 'payment':
-        toast.info('Payment methods coming soon!');
-        break;
       case 'notifications':
         setShowNotificationsSelector(true);
         break;
       case 'privacy':
-        toast.info('Privacy settings coming soon!');
+        if (Capacitor.isNativePlatform()) {
+          void Browser.open({ url: PRIVACY_POLICY_URL });
+        } else {
+          window.open(PRIVACY_POLICY_URL, '_blank');
+        }
         break;
-      case 'help':
-        toast.info('Help & Support coming soon!');
+      case 'security':
+        setShowSecuritySheet(true);
         break;
     }
   };
@@ -222,6 +226,7 @@ const Account = () => {
       <EditProfileDialog open={showEditProfile} onOpenChange={setShowEditProfile} />
       <InviteFriendsDialog open={showInviteFriends} onOpenChange={setShowInviteFriends} />
       <DeleteAccountDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount} />
+      <SecuritySheet open={showSecuritySheet} onOpenChange={setShowSecuritySheet} />
 
       {/* Currency Selector Modal */}
       {showCurrencySelector && (
