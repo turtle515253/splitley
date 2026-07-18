@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Capacitor, registerPlugin } from '@capacitor/core';
-
-interface NativeThemePlugin {
-  setStatusBar(options: { color: string; lightIcons: boolean }): Promise<void>;
-}
-const NativeTheme = registerPlugin<NativeThemePlugin>('NativeTheme');
+import { Capacitor } from '@capacitor/core';
+import { NativeTheme } from '@/lib/native';
 import { saveDeviceState, loadDeviceState } from '@/lib/storage';
 
 type Theme = 'light' | 'dark' | 'system';

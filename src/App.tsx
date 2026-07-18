@@ -14,6 +14,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import SpaRedirector from "@/components/SpaRedirector";
 import DeepLinkHandler from "@/components/DeepLinkHandler";
 import BiometricGate from "@/components/security/BiometricGate";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 import Index from "./pages/Index";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
@@ -86,6 +87,7 @@ function AppContent() {
             <BrowserRouter>
               <SpaRedirector />
               <DeepLinkHandler />
+              <PushNotificationSetup />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />

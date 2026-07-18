@@ -13,8 +13,9 @@ function mapNativePermission(state: string): NotificationPermission {
 
 /**
  * Notification permission handling.
- * Native: Android notification permission via @capacitor/local-notifications
- * (the web Notification API is always denied inside the WebView).
+ * Native: the OS notification permission is the single source of truth
+ * (the Notifications row opens the system settings screen, Splitwise-style);
+ * it is re-checked whenever the app returns to the foreground.
  * Web: standard Notification API + service worker.
  */
 export function useNotifications() {
@@ -24,10 +25,18 @@ export function useNotifications() {
   useEffect(() => {
     if (isNative) {
       setIsSupported(true);
-      LocalNotifications.checkPermissions()
-        .then(({ display }) => setPermission(mapNativePermission(display)))
-        .catch(() => setIsSupported(false));
-      return;
+      const check = () => {
+        LocalNotifications.checkPermissions()
+          .then(({ display }) => setPermission(mapNativePermission(display)))
+          .catch(() => setIsSupported(false));
+      };
+      check();
+      // Re-check when returning from the system settings screen
+      const onVisible = () => {
+        if (document.visibilityState === 'visible') check();
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      return () => document.removeEventListener('visibilitychange', onVisible);
     }
 
     const supported = 'Notification' in window && 'serviceWorker' in navigator;
@@ -111,6 +120,7 @@ export function useNotifications() {
   return {
     permission,
     isSupported,
+    enabled: permission === 'granted',
     requestPermission,
     sendNotification,
   };

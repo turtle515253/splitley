@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { saveDeviceState, loadDeviceState } from '@/lib/storage';
+import { teardownPushNotifications } from '@/lib/pushNotifications';
 
 interface Profile {
   id: string;
@@ -175,6 +176,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // Stop push notifications for this device before the session goes away
+    if (user) {
+      await teardownPushNotifications(user.id).catch(() => undefined);
+    }
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

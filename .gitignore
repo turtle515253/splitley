@@ -25,3 +25,4 @@ dist-ssr
 *.sw?
 Splitley Creds.txt
 supabase/.temp/
+android/app/google-services.json

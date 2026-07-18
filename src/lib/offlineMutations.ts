@@ -80,6 +80,13 @@ async function requireUserId(): Promise<string> {
   return session.user.id;
 }
 
+/** Fire-and-forget push notification to affected users; failures are logged only. */
+function notifyPush(body: { type: 'expense' | 'settlement' | 'group_settlement'; expenseId?: string; settlementId?: string }) {
+  void supabase.functions.invoke('notify-push', { body }).catch((error) => {
+    console.warn('notify-push failed:', error);
+  });
+}
+
 export async function createExpenseFn(vars: CreateExpenseVars) {
   const { data: expense, error: expenseError } = await supabase
     .from('expenses')
@@ -106,6 +113,7 @@ export async function createExpenseFn(vars: CreateExpenseVars) {
     if (splitsError) throw splitsError;
   }
 
+  notifyPush({ type: 'expense', expenseId: expense.id });
   return expense;
 }
 
@@ -195,6 +203,7 @@ export async function settleUpFn(vars: SettleUpVars) {
     .single();
 
   if (error) throw error;
+  notifyPush({ type: 'settlement', settlementId: settlement.id });
   return { settlementId: settlement.id, amount };
 }
 
@@ -211,6 +220,7 @@ export async function groupSettleFn(vars: GroupSettleVars) {
     .single();
 
   if (error) throw error;
+  notifyPush({ type: 'group_settlement', settlementId: data.id });
   return data;
 }
 

@@ -9,10 +9,10 @@ interface NotificationsSelectorProps {
 }
 
 export function NotificationsSelector({ onClose }: NotificationsSelectorProps) {
-  const { permission, isSupported, requestPermission } = useNotifications();
+  const { permission, isSupported, enabled, requestPermission } = useNotifications();
 
   const handleToggle = async () => {
-    if (permission !== 'granted') {
+    if (!enabled) {
       await requestPermission();
     }
   };
@@ -40,13 +40,13 @@ export function NotificationsSelector({ onClose }: NotificationsSelectorProps) {
         onClick={handleToggle}
         className={cn(
           "w-full flex items-center gap-3 p-4 rounded-xl transition-colors text-left",
-          permission === 'granted' 
-            ? "bg-primary/10 border border-primary/20" 
+          enabled
+            ? "bg-primary/10 border border-primary/20"
             : "bg-accent hover:bg-accent/80"
         )}
       >
         <div className="p-2 rounded-lg bg-background">
-          {permission === 'granted' ? (
+          {enabled ? (
             <Bell className="h-5 w-5 text-primary" />
           ) : (
             <BellOff className="h-5 w-5 text-muted-foreground" />
@@ -55,7 +55,7 @@ export function NotificationsSelector({ onClose }: NotificationsSelectorProps) {
         <div className="flex-1">
           <p className="font-medium text-sm">Push Notifications</p>
           <p className="text-xs text-muted-foreground">
-            {permission === 'granted' 
+            {enabled
               ? 'You will receive notifications for new expenses and settlements'
               : permission === 'denied'
               ? 'Notifications are blocked. Enable them in device settings.'
@@ -63,8 +63,8 @@ export function NotificationsSelector({ onClose }: NotificationsSelectorProps) {
             }
           </p>
         </div>
-        <Switch 
-          checked={permission === 'granted'} 
+        <Switch
+          checked={enabled}
           disabled={permission === 'denied'}
         />
       </button>

@@ -18,6 +18,7 @@ import { SecuritySheet } from '@/components/security/SecuritySheet';
 import { PRIVACY_POLICY_URL } from '@/lib/appConfig';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { NativeTheme } from '@/lib/native';
 import {
   ChevronRight,
   Settings,
@@ -50,7 +51,7 @@ const Account = () => {
   const { profile, logout, isLoading } = useAuth();
   const { currency } = useCurrency();
   const { theme } = useTheme();
-  const { permission: notificationPermission } = useNotifications();
+  const { enabled: notificationsEnabled } = useNotifications();
   const navigate = useNavigate();
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
   const [showAppearanceSelector, setShowAppearanceSelector] = useState(false);
@@ -83,7 +84,14 @@ const Account = () => {
         setShowInviteFriends(true);
         break;
       case 'notifications':
-        setShowNotificationsSelector(true);
+        if (Capacitor.isNativePlatform()) {
+          // Splitwise-style: jump straight to the system notification settings
+          void NativeTheme.openNotificationSettings().catch(() =>
+            setShowNotificationsSelector(true)
+          );
+        } else {
+          setShowNotificationsSelector(true);
+        }
         break;
       case 'privacy':
         if (Capacitor.isNativePlatform()) {
@@ -106,7 +114,7 @@ const Account = () => {
       return theme.charAt(0).toUpperCase() + theme.slice(1);
     }
     if (item.action === 'notifications') {
-      return notificationPermission === 'granted' ? 'Enabled' : 'Disabled';
+      return notificationsEnabled ? 'Enabled' : 'Disabled';
     }
     return item.subtitle;
   };
@@ -230,8 +238,8 @@ const Account = () => {
 
       {/* Currency Selector Modal */}
       {showCurrencySelector && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+        <div className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-[60] bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Select Currency</h2>
@@ -253,8 +261,8 @@ const Account = () => {
 
       {/* Appearance Selector Modal */}
       {showAppearanceSelector && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+        <div className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-[60] bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Appearance</h2>
@@ -276,8 +284,8 @@ const Account = () => {
 
       {/* Notifications Selector Modal */}
       {showNotificationsSelector && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
+        <div className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 z-[60] bg-background rounded-t-3xl shadow-elegant animate-slide-up safe-bottom">
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Notifications</h2>

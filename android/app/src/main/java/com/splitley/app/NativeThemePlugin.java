@@ -1,6 +1,8 @@
 package com.splitley.app;
 
+import android.content.Intent;
 import android.graphics.Color;
+import android.provider.Settings;
 import android.view.Window;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -34,5 +36,19 @@ public class NativeThemePlugin extends Plugin {
                 call.reject(e.getMessage());
             }
         });
+    }
+
+    /** Opens the system notification settings screen for this app. */
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
     }
 }
