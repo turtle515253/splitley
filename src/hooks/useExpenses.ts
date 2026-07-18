@@ -218,6 +218,7 @@ export function useUpdateExpense() {
                       ? { display_name: payerMember.display_name, avatar_url: payerMember.avatar_url }
                       : e.paidByProfile,
                     splits: vars.splits.map((s) => ({ user_id: s.userId, amount: s.amount, is_settled: false })),
+                    pendingSync: true,
                   }
                 : e
             ),
@@ -228,7 +229,7 @@ export function useUpdateExpense() {
       queryClient.setQueryData<Activity[]>(['activities'], (old) =>
         old?.map((a) =>
           a.expenseId === vars.expenseId
-            ? { ...a, expenseDescription: vars.description, amount: vars.amount, category: vars.category || 'general' }
+            ? { ...a, expenseDescription: vars.description, amount: vars.amount, category: vars.category || 'general', pendingSync: true }
             : a
         )
       );

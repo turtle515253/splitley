@@ -12,6 +12,7 @@ import { isOfflineId } from '@/lib/offlineMutations';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AddMemberDialog } from '@/components/groups/AddMemberDialog';
+import { GroupSettingsDrawer } from '@/components/groups/GroupSettingsDrawer';
 import { RemoveMemberDialog } from '@/components/groups/RemoveMemberDialog';
 import { DeleteExpenseDialog } from '@/components/activity/DeleteExpenseDialog';
 import { GroupBalanceSummary } from '@/components/groups/GroupBalanceSummary';
@@ -39,6 +40,7 @@ const GroupDetail = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; description: string } | null>(null);
   const [showBalanceSummary, setShowBalanceSummary] = useState(false);
   const [showChartsDialog, setShowChartsDialog] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const isCreator = group?.created_by === user?.id;
   
   if (isLoading) {
@@ -136,7 +138,7 @@ const GroupDetail = () => {
                 <h1 className="text-xl font-bold truncate">{group.name}</h1>
               </div>
             </div>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => setShowSettingsDrawer(true)}>
               <Settings className="h-5 w-5" />
             </Button>
           </div>
@@ -263,7 +265,7 @@ const GroupDetail = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-lg">
-                            {isOfflineId(expense.id) ? (
+                            {isOfflineId(expense.id) || expense.pendingSync ? (
                               <RefreshCw className="h-5 w-5 text-muted-foreground" />
                             ) : (
                               getCategoryIcon(expense.category || 'general')
@@ -274,7 +276,7 @@ const GroupDetail = () => {
                             <p className="text-xs text-muted-foreground">
                               Paid by {expense.paidByProfile?.display_name || 'Unknown'} • {format(new Date(expense.created_at), 'MMM d')}
                             </p>
-                            {isOfflineId(expense.id) && (
+                            {(isOfflineId(expense.id) || expense.pendingSync) && (
                               <p className="text-xs text-destructive mt-0.5">
                                 Not yet synced with the server
                               </p>
@@ -362,6 +364,15 @@ const GroupDetail = () => {
         groupId={groupId}
       />
       
+      <GroupSettingsDrawer
+        open={showSettingsDrawer}
+        onOpenChange={setShowSettingsDrawer}
+        groupId={groupId!}
+        groupName={group.name}
+        groupEmoji={group.emoji || '👥'}
+        isCreator={isCreator}
+      />
+
       <GroupChartsDialog
         open={showChartsDialog}
         onOpenChange={setShowChartsDialog}

@@ -33,6 +33,8 @@ export interface GroupWithDetails extends Group {
       avatar_url: string | null;
     } | null;
     splits: { user_id: string; amount: number; is_settled?: boolean | null }[];
+    /** Set by optimistic edits made offline; cleared when the refetch replaces the row */
+    pendingSync?: boolean;
   }[];
 }
 
@@ -250,6 +252,73 @@ export function useCreateGroup() {
     onError: (error) => {
       console.error("Error creating group:", error);
       toast.error("Failed to create group");
+    },
+  });
+}
+
+export function useUpdateGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, name, emoji }: { groupId: string; name: string; emoji: string }) => {
+      const { error } = await supabase.from("groups").update({ name, emoji }).eq("id", groupId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["group", variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group updated!");
+    },
+    onError: (error) => {
+      console.error("Error updating group:", error);
+      toast.error("Failed to update group");
+    },
+  });
+}
+
+export function useDeleteGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId }: { groupId: string }) => {
+      const { error } = await supabase.from("groups").delete().eq("id", groupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      toast.success("Group deleted");
+    },
+    onError: (error) => {
+      console.error("Error deleting group:", error);
+      toast.error("Failed to delete group");
+    },
+  });
+}
+
+export function useLeaveGroup() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ groupId }: { groupId: string }) => {
+      if (!user) throw new Error("Must be logged in");
+      const { error } = await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      toast.success("You left the group");
+    },
+    onError: (error) => {
+      console.error("Error leaving group:", error);
+      toast.error("Failed to leave group");
     },
   });
 }

@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+interface NativeThemePlugin {
+  setStatusBar(options: { color: string; lightIcons: boolean }): Promise<void>;
+}
+const NativeTheme = registerPlugin<NativeThemePlugin>('NativeTheme');
 import { saveDeviceState, loadDeviceState } from '@/lib/storage';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -88,11 +92,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const dark = resolvedTheme === 'dark';
-    // The plugin defaults to overlaying the WebView; keep content below the bar
-    StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
-    StatusBar.setBackgroundColor({ color: dark ? '#101318' : '#faf9f7' }).catch(() => {});
-    // Style.Dark = light text on dark background, Style.Light = dark text
-    StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
+    NativeTheme.setStatusBar({
+      color: dark ? '#101318' : '#faf9f7',
+      lightIcons: dark,
+    }).catch(() => {});
   }, [resolvedTheme]);
 
   useEffect(() => {

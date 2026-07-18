@@ -154,7 +154,7 @@ const Activity = () => {
                       <CardContent className="p-2">
                         {items.map((activity, index) => {
                           const category = activity.category || 'general';
-                          const isUnsynced = isOfflineId(activity.expenseId) || activity.id.includes('offline-');
+                          const isUnsynced = isOfflineId(activity.expenseId) || activity.id.includes('offline-') || !!activity.pendingSync;
                           const CategoryIcon = isUnsynced
                             ? RefreshCw
                             : activity.type === 'expense_added'

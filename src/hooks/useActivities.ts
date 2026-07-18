@@ -18,6 +18,8 @@ export interface Activity {
   createdAt: Date;
   expenseId?: string;
   groupId?: string;
+  /** Set by optimistic edits made offline; cleared when the refetch replaces the row */
+  pendingSync?: boolean;
 }
 
 export function useActivities() {
