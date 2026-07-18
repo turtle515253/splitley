@@ -14,6 +14,10 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // When viewing a group, the FAB adds an expense to that group directly
+  const groupMatch = location.pathname.match(/^\/groups\/([^/]+)$/);
+  const addExpensePath = groupMatch ? `/add-expense?groupId=${groupMatch[1]}` : '/add-expense';
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
       <div className="flex items-center justify-around px-2 pt-2 pb-2 max-w-lg mx-auto relative">
@@ -40,7 +44,7 @@ export function BottomNav() {
         <Button
           variant="fab"
           size="fab"
-          onClick={() => navigate('/add-expense')}
+          onClick={() => navigate(addExpensePath)}
           className="absolute left-1/2 -translate-x-1/2 -top-5 shadow-lg"
         >
           <Plus className="h-6 w-6" />
